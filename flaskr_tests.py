@@ -7,9 +7,13 @@ from mocker import MockerTestCase, MATCH
 
 FIRST_NAME = "Jan"
 LAST_NAME = "Kowalski"
-EMAIL_ADDRESS = """jan@kowalski.com"""
+EMAIL_ADDRESS = "jan@kowalski.com"
+TEST_KEY = "TEST_KEY"
 REGISTRATION_REQUEST = """{"email":"%s", "firstName":"%s", "lastName": "%s"}""" % (EMAIL_ADDRESS, FIRST_NAME, LAST_NAME)
-TEST_USER_IN_DB = {"email": EMAIL_ADDRESS, "firstName": FIRST_NAME, "lastName": LAST_NAME, "key": "TEST_KEY"}
+TEST_NOT_CONFIRMED_USER_IN_DB = {"email": EMAIL_ADDRESS, "firstName": FIRST_NAME, "lastName": LAST_NAME,
+                                 "key": TEST_KEY, "isConfirmed": False}
+TEST_CONFIRMED_USER_IN_DB = {"email": EMAIL_ADDRESS, "firstName": FIRST_NAME, "lastName": LAST_NAME, "key": TEST_KEY,
+                             "isConfirmed": True}
 
 
 class EmailsEndpointTest(MockerTestCase):
@@ -21,7 +25,7 @@ class EmailsEndpointTest(MockerTestCase):
         self.db = mongomock.Connection().db
         flaskr.get_db = get_db
 
-    def test_should_add_new_email_to_database_and_send_email(self):
+    def test_should_send_email_and_return_correct_status_code(self):
         # Given: Empty database
         self.mail_gun_should_receive(lambda d: d['to'] == EMAIL_ADDRESS and d['subject'] == "Hello")
 
@@ -40,7 +44,7 @@ class EmailsEndpointTest(MockerTestCase):
         # When: Post to users
         self.register_test_user()
 
-        # Then response is OK
+        # Then row to database with random key is added
         self.assertEqual(self.db.users.count(), 1)
         self.assertEqual(self.db.users.find_one()["email"], EMAIL_ADDRESS)
         self.assertEqual(self.db.users.find_one()["firstName"], FIRST_NAME)
@@ -50,22 +54,49 @@ class EmailsEndpointTest(MockerTestCase):
 
     def test_should_update_key_in_database_if_already_registered(self):
         # Given: database
-        self.db.users.insert(TEST_USER_IN_DB)
+        self.db.users.insert(TEST_NOT_CONFIRMED_USER_IN_DB)
         self.mail_gun_should_receive()
 
         # When: Post to users
         self.register_test_user()
 
-        # Then response is OK
+        # Then Key is changed
         self.assertEqual(self.db.users.count(), 1)
         user_in_db = self.db.users.find_one()
         self.assertDictContainsSubset({"email": EMAIL_ADDRESS, "firstName": FIRST_NAME, "lastName": LAST_NAME},
                                       user_in_db)
         self.assertIsNotNone(user_in_db["key"])
+        self.assertIsNot(user_in_db["key"], TEST_KEY)
+
+    def test_should_not_update_key_in_database_if_already_registered(self):
+        # Given: database
+        self.db.users.insert(TEST_CONFIRMED_USER_IN_DB)
+        self.mail_gun_should_receive()
+
+        # When: Post to users
+        self.register_test_user()
+
+        # Then key is without change
+        self.assertEqual(self.db.users.count(), 1)
+        user_in_db = self.db.users.find_one()
+        self.assertDictContainsSubset(
+            {"email": EMAIL_ADDRESS, "firstName": FIRST_NAME, "lastName": LAST_NAME, "key": TEST_KEY},
+            user_in_db)
+
+    def test_should_send_deny_email_if_already_registered(self):
+        # Given: database
+        self.db.users.insert(TEST_CONFIRMED_USER_IN_DB)
+        self.mail_gun_should_receive(lambda d: d['to'] == EMAIL_ADDRESS and d['subject'] == "We've got a problem here !")
+
+        # When: Post to users
+        rv = self.register_test_user()
+
+        # Then key is without change
+        self.assertEqual(rv.status_code, 304)
 
     def test_should_resend_email_with_new_key_if_is_not_confirmed(self):
         # Given: database
-        self.db.users.insert(TEST_USER_IN_DB)
+        self.db.users.insert(TEST_NOT_CONFIRMED_USER_IN_DB)
 
         self.mail_gun_should_receive(lambda d: d['to'] == EMAIL_ADDRESS and d['subject'] == "Hello")
 
@@ -83,8 +114,8 @@ class EmailsEndpointTest(MockerTestCase):
         result = self.mocker.mock()
         mock_post = self.mocker.replace("requests.post")
         mock_post('https://api.mailgun.net/v2/system.warsjawa.pl/messages',
-               auth=('api', None),
-               data=MATCH(data_validator)
+                  auth=('api', None),
+                  data=MATCH(data_validator)
         )
         self.mocker.result(result)
         self.mocker.replay()
