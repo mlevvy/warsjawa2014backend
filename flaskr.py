@@ -4,6 +4,7 @@ from pymongo import MongoClient
 from flask import request
 from flask import g
 import os, binascii
+import mailgunresource
 
 app = Flask(__name__)
 
@@ -21,6 +22,7 @@ def get_all_emails():
     rjson['key'] = binascii.b2a_hex(os.urandom(128))
     rjson['isConfirmed'] = False
     get_db().users.update({"email": rjson['email']}, {"$set": rjson}, upsert=True)
+    mailgunresource.send_registration_email(rjson)
     return "", 201
 
 
