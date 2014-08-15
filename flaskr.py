@@ -5,10 +5,16 @@ from flask import request
 from flask import g
 import os, binascii
 import mailgunresource
+import logging
 
 app = Flask(__name__)
 
 # TODO Dodaj walidację requestów
+
+
+handler = logging.StreamHandler()
+handler.setLevel(logging.DEBUG)
+app.logger.addHandler(handler)
 
 
 def get_db():
@@ -50,6 +56,50 @@ def confirm_new_user():
     else:
         mailgunresource.send_deny_confirm_user(request_json)
         return "", 304
+
+
+@app.route('/emails/<workshop_id>', methods=['POST'])
+def register_new_email_for_workshop(workshop_id):
+    workshop = get_db().workshops.find_and_modify(
+        query={"workshopId": workshop_id},
+        update={"$push": {"emails": request.json}}
+    )
+    if workshop is None:
+        return """{"message": "Workshop %s not found"}""" % workshop_id, 404
+    else:
+        return "", 201
+
+
+@app.route('/emails/<workshop_id>/<attender_email>', methods=['PUT'])
+def register_new_user_for_workshop(workshop_id, attender_email):
+    workshop = get_db().workshops.find_and_modify(
+        query={"workshopId": workshop_id},
+        update={"$push": {"users": attender_email}}
+    )
+    if workshop is None:
+        return """{"message": "Workshop %s not found"}""" % workshop_id, 404
+
+    user = get_db().users.find_one({"email": attender_email})
+    if user is None:
+        return """{"message": "User %s not found"}""" % attender_email, 412
+
+    sent_emails_id = []
+
+    for mail in workshop['emails']:
+        if mail['emailId'] not in user['emails']:
+            mailgunresource.send_workshop_mail(attender_email, mail['subject'], mail['text'])
+            sent_emails_id.append(mail['emailId'])
+
+    get_db().users.update(
+        {"_id": user['_id']},
+        {"$push": {"emails": {"$each": sent_emails_id}}}
+    )
+    return "", 201
+
+
+@app.route('/emails/<workshop_id>/<attender_email>', methods=['DELETE'])
+def unregister_user_from_workshop(workshop_id, attender_email):
+    return ""  # TODO
 
 
 if __name__ == '__main__':
