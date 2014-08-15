@@ -18,6 +18,10 @@ def send_deny_confirm_user(user_registration):
     return send_mail(user_registration['email'], "You can not confirm twice", "Lorem Ipsum")
 
 
+def send_workshop_mail(user_mail, subject, text):
+    return send_mail(user_mail, subject, text)
+
+
 def send_mail(to, subject, text):
     return \
         requests.post(

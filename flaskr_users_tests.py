@@ -2,7 +2,7 @@
 import unittest
 from unittest.mock import patch
 
-from flaskr_tests import FlaskrWithMongoTest
+from flaskr_tests import FlaskrWithMongoTest, assert_mailgun
 
 # Example data
 FIRST_NAME = "Jan"
@@ -19,7 +19,8 @@ TEST_NOT_CONFIRMED_USER_IN_DB = {
     "email": EMAIL_ADDRESS,
     "firstName": FIRST_NAME,
     "lastName": LAST_NAME,
-    "key": TEST_KEY, "isConfirmed": False
+    "key": TEST_KEY, "isConfirmed": False,
+    "emails": []
 }
 
 TEST_CONFIRMED_USER_IN_DB = {
@@ -27,7 +28,8 @@ TEST_CONFIRMED_USER_IN_DB = {
     "firstName": FIRST_NAME,
     "lastName": LAST_NAME,
     "key": TEST_KEY,
-    "isConfirmed": True
+    "isConfirmed": True,
+    "emails": []
 }
 
 
@@ -101,7 +103,7 @@ class UsersEndpointTest(FlaskrWithMongoTest, unittest.TestCase):
 
         # Then key is without change
         self.assertEqual(rv.status_code, 304)
-        self.assert_mailgun(requests_mock, EMAIL_ADDRESS, "We've got a problem here !")
+        assert_mailgun(requests_mock, EMAIL_ADDRESS, "We've got a problem here !")
 
     @patch('mailgunresource.requests')
     def test_should_resend_email_with_new_key_if_is_not_confirmed(self, requests_mock):
@@ -112,7 +114,7 @@ class UsersEndpointTest(FlaskrWithMongoTest, unittest.TestCase):
         self.register_test_user()
 
         # Then
-        self.assert_mailgun(requests_mock, EMAIL_ADDRESS, "Hello")
+        assert_mailgun(requests_mock, EMAIL_ADDRESS, "Hello")
 
     @patch('mailgunresource.requests')
     def test_should_deny_confirmation_by_sending_email_if_user_already_confirmed(self, requests_mock):
@@ -124,7 +126,7 @@ class UsersEndpointTest(FlaskrWithMongoTest, unittest.TestCase):
 
         # Then Return code is 304 and e-mail is sent
         self.assertEqual(rv.status_code, 304)
-        self.assert_mailgun(requests_mock, EMAIL_ADDRESS, "You can not confirm twice")
+        assert_mailgun(requests_mock, EMAIL_ADDRESS, "You can not confirm twice")
 
     @patch('mailgunresource.requests')
     def test_should_deny_confirmation_by_not_changing_the_key_if_user_already_confirmed(self, requests_mock):
@@ -161,7 +163,7 @@ class UsersEndpointTest(FlaskrWithMongoTest, unittest.TestCase):
 
         # Then
         self.assertEqual(rv.status_code, 201)
-        self.assert_mailgun(requests_mock, EMAIL_ADDRESS, "You are confirmed now")
+        assert_mailgun(requests_mock, EMAIL_ADDRESS, "You are confirmed now")
 
     @patch('mailgunresource.requests')
     def test_should_allow_confirmation_by_changing_state_if_user_is_not_confirmed(self, requests_mock):
@@ -185,12 +187,6 @@ class UsersEndpointTest(FlaskrWithMongoTest, unittest.TestCase):
     def confirm_test_user(self):
         rv = self.app.put('/users', data=CONFIRMATION_REQUEST, content_type="application/json")
         return rv
-
-    def assert_mailgun(self, requests_mock, to, subject):
-        ((mailgun_url, ), mailgun_attrs) = requests_mock.post.call_args
-        self.assertEqual("https://api.mailgun.net/v2/system.warsjawa.pl/messages", mailgun_url)
-        self.assertEqual(to, mailgun_attrs['data']['to'])
-        self.assertEqual(subject, mailgun_attrs['data']['subject'])
 
 
 if __name__ == '__main__':

@@ -16,5 +16,14 @@ class FlaskrWithMongoTest():
         flaskr.get_db = get_db
 
 
+def assert_mailgun(requests_mock, to=None, subject=None):
+    ((mailgun_url, ), mailgun_attrs) = requests_mock.post.call_args
+    assert "https://api.mailgun.net/v2/system.warsjawa.pl/messages" == mailgun_url
+    if to is not None:
+        assert to == mailgun_attrs['data']['to']
+    if subject is not None:
+        assert subject == mailgun_attrs['data']['subject']
+
+
 if __name__ == '__main__':
     unittest.main()
