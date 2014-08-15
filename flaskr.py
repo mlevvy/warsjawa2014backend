@@ -94,12 +94,16 @@ def register_new_user_for_workshop(workshop_id, attender_email):
         {"_id": user['_id']},
         {"$push": {"emails": {"$each": sent_emails_id}}}
     )
-    return "", 201
+    return "", 200
 
 
 @app.route('/emails/<workshop_id>/<attender_email>', methods=['DELETE'])
 def unregister_user_from_workshop(workshop_id, attender_email):
-    return ""  # TODO
+    update_result = get_db().workshops.update({"workshopId": workshop_id}, {"$pull": {"users": attender_email}})
+    if update_result['updatedExisting']:
+        return "", 200
+    else:
+        return "", 404
 
 
 if __name__ == '__main__':
