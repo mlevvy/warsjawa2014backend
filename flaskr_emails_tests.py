@@ -1,4 +1,5 @@
 import unittest
+import json
 
 from flaskr_tests import FlaskrWithMongoTest, assert_mailgun
 from unittest.mock import patch
@@ -16,7 +17,7 @@ WORKSHOP_IN_DB = {
         "adam@nowak.pl"
     ],
     "users": [
-        "user1@example.com",
+        USER_EMAIL_ADDRESS,
         "user2@example.com",
         "user3@example.com"
     ],
@@ -24,6 +25,8 @@ WORKSHOP_IN_DB = {
         {"emailId": 1, "subject": FIRST_MAIL_SUBJECT, "text": "text"}
     ]
 }
+
+EMAILS = {"emails": [{"subject": FIRST_MAIL_SUBJECT, "text": "text"}]}
 
 REGISTER_EMAIL_REQUEST = """{
             "emailId": 3,
@@ -33,6 +36,29 @@ REGISTER_EMAIL_REQUEST = """{
 
 
 class EmailsEndpointTest(FlaskrWithMongoTest, unittest.TestCase):
+
+    @patch('mailgunresource.requests')
+    def test_should_get_list_of_emails_for_specified_workshops(self, requests_mock):
+        # Given a database with one workshop
+        self.db.emails.insert(WORKSHOP_IN_DB)
+
+        # When request
+        rv = self.get_one_workshop()
+
+        # Correct response should be returned
+        self.assertEqual(rv.status_code, 200)
+        self.assertEqual(json.loads(rv.data.decode('UTF-8')), EMAILS)
+
+    @patch('mailgunresource.requests')
+    def test_should_return_404_if_workshop_not_found(self, requests_mock):
+        # Given an empty database
+
+        # When request
+        rv = self.get_one_workshop()
+
+        # Correct response should be returned
+        self.assertEqual(rv.status_code, 404)
+
     @patch('mailgunresource.requests')
     def test_should_save_user_registration_in_database_when_user_selects_workshop(self, requests_mock):
         # Given:
@@ -109,6 +135,10 @@ class EmailsEndpointTest(FlaskrWithMongoTest, unittest.TestCase):
 
     def new_workshop_email_is_registered(self):
         return self.app.post('/emails/%s' % WORKSHOP_ID, data=REGISTER_EMAIL_REQUEST, content_type="application/json")
+
+    def get_one_workshop(self):
+        rv = self.app.get('/emails/%s' % WORKSHOP_ID, content_type="application/json")
+        return rv
 
 
 if __name__ == '__main__':
