@@ -84,6 +84,19 @@ class EmailsEndpointTest(FlaskrWithMongoTest, unittest.TestCase):
         self.assertEqual(2, len(workshop['emails']))
         self.assertEqual(SECOND_MAIL_SUBJECT, workshop['emails'][1]['subject'])
 
+    @patch('mailgunresource.requests')
+    def test_should_unregister_user_from_workshop(self, requests_mock):
+        # Given:
+        self.user_and_workshop_exists()
+        self.user_selects_workshop()
+
+        # When:
+        self.user_deselects_workshop()
+
+        # Then
+        workshop = self.db.workshops.find_one()
+        self.assertNotIn(USER_EMAIL_ADDRESS, workshop['users'])
+
     def user_and_workshop_exists(self):
         self.db.users.insert(CONFIRMED_USER_IN_DB)
         self.db.workshops.insert(WORKSHOP_IN_DB)
