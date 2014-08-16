@@ -106,5 +106,7 @@ def unregister_user_from_workshop(workshop_id, attender_email):
         return "", 404
 
 
+
 if __name__ == '__main__':
+    app.run(host="0.0.0.0", port=80)
     app.run()
