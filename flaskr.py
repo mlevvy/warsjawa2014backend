@@ -62,7 +62,7 @@ def confirm_new_user():
 def register_new_email_for_workshop(workshop_id):
     workshop = get_db().workshops.find_and_modify(
         query={"workshopId": workshop_id},
-        update={"$push": {"emails": request.json}}
+        update={"$addToSet": {"emails": request.json}}
     )
     if workshop is None:
         return """{"message": "Workshop %s not found"}""" % workshop_id, 404
