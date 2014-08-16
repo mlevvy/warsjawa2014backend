@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 from flask import Flask
 from pymongo import MongoClient
-from flask import request
-from flask import g
+from flask import request, g, jsonify
 import os, binascii
 import mailgunresource
 import logging
+
 
 app = Flask(__name__)
 
@@ -62,7 +62,7 @@ def confirm_new_user():
 def register_new_email_for_workshop(workshop_id):
     workshop = get_db().workshops.find_and_modify(
         query={"workshopId": workshop_id},
-        update={"$push": {"emails": request.json}}
+        update={"$addToSet": {"emails": request.json}}
     )
     if workshop is None:
         return """{"message": "Workshop %s not found"}""" % workshop_id, 404
@@ -105,6 +105,20 @@ def unregister_user_from_workshop(workshop_id, attender_email):
     else:
         return "", 404
 
+@app.route("/emails/<workshop_id>", methods=['GET'])
+def get_workshop_emails(workshop_id):
+    # Well, I could use aggregation, but it is not implemented in mongomock :(
+    data = get_db().emails.find_one({"workshopId": workshop_id}, {"emails.emailId": 0})
+
+    if data is None:
+        return "", 404
+
+    trimmed_emails = data['emails']
+    for email in trimmed_emails:
+        email.pop("emailId", None)
+
+    json_data = jsonify(emails=trimmed_emails)
+    return json_data
 
 
 if __name__ == '__main__':
