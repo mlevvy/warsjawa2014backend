@@ -6,12 +6,7 @@ import os, binascii
 import mailgunresource
 import logging
 
-
 app = Flask(__name__)
-
-# TODO Dodaj walidację requestów
-
-
 handler = logging.StreamHandler()
 handler.setLevel(logging.DEBUG)
 app.logger.addHandler(handler)
@@ -19,7 +14,7 @@ app.logger.addHandler(handler)
 
 def get_db():
     if not hasattr(g, 'db'):
-        g.db = MongoClient('db', 27017)
+        g.db = MongoClient('db', 27017).warsjawa
     return g.db
 
 
