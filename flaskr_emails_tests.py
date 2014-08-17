@@ -40,7 +40,7 @@ class EmailsEndpointTest(FlaskrWithMongoTest, unittest.TestCase):
     @patch('mailgunresource.requests')
     def test_should_get_list_of_emails_for_specified_workshops(self, requests_mock):
         # Given a database with one workshop
-        self.db.emails.insert(WORKSHOP_IN_DB)
+        self.db.workshops.insert(WORKSHOP_IN_DB)
 
         # When request
         rv = self.get_one_workshop()
