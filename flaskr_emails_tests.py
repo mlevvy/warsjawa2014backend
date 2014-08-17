@@ -1,5 +1,6 @@
 import unittest
 import json
+import datetime
 
 from flaskr_tests import FlaskrWithMongoTest, assert_mailgun
 from unittest.mock import patch
@@ -9,6 +10,8 @@ FIRST_MAIL_SUBJECT = "Introduction to test workshop"
 SECOND_MAIL_SUBJECT = "Link to repository"
 
 WORKSHOP_ID = "test_workshop"
+
+CURRENT_DATE = datetime.datetime(2007, 12, 6, 16, 29, 43, 79043)
 
 WORKSHOP_IN_DB = {
     "workshopId": WORKSHOP_ID,
@@ -22,11 +25,11 @@ WORKSHOP_IN_DB = {
         "user3@example.com"
     ],
     "emails": [
-        {"emailId": 1, "subject": FIRST_MAIL_SUBJECT, "text": "text"}
+        {"emailId": 1, "subject": FIRST_MAIL_SUBJECT, "text": "text", "date": CURRENT_DATE}
     ]
 }
 
-EMAILS = {"emails": [{"subject": FIRST_MAIL_SUBJECT, "text": "text"}]}
+EMAILS = {"emails": [{"subject": FIRST_MAIL_SUBJECT, "text": "text", "date": "Thu, 06 Dec 2007 16:29:43 GMT"}]}
 
 REGISTER_EMAIL_REQUEST = """{
             "emailId": 3,
@@ -109,6 +112,9 @@ class EmailsEndpointTest(FlaskrWithMongoTest, unittest.TestCase):
         workshop = self.db.workshops.find_one()
         self.assertEqual(2, len(workshop['emails']))
         self.assertEqual(SECOND_MAIL_SUBJECT, workshop['emails'][1]['subject'])
+        self.assertIsNotNone(workshop['emails'][1]['emailId'])
+        self.assertIsNotNone(workshop['emails'][1]['date'])
+
 
     @patch('mailgunresource.requests')
     def test_should_unregister_user_from_workshop(self, requests_mock):
