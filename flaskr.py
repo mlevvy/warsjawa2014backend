@@ -23,6 +23,7 @@ def add_new_user():
     request_json = request.json
     request_json['key'] = binascii.hexlify(os.urandom(128)).decode('UTF-8')
     request_json['isConfirmed'] = False
+    request_json['emails'] = []
 
     find_result = get_db().users.find_one({"email": request_json['email']})
     if find_result is None or find_result['isConfirmed'] is False:
