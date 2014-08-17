@@ -103,7 +103,7 @@ def unregister_user_from_workshop(workshop_id, attender_email):
 @app.route("/emails/<workshop_id>", methods=['GET'])
 def get_workshop_emails(workshop_id):
     # Well, I could use aggregation, but it is not implemented in mongomock :(
-    data = get_db().emails.find_one({"workshopId": workshop_id}, {"emails.emailId": 0})
+    data = get_db().workshops.find_one({"workshopId": workshop_id}, {"emails.emailId": 0})
 
     if data is None:
         return "", 404
