@@ -5,6 +5,7 @@ from flask import request, g, jsonify
 import os, binascii
 import mailgunresource
 import logging
+import datetime
 
 app = Flask(__name__)
 handler = logging.StreamHandler()
@@ -55,6 +56,10 @@ def confirm_new_user():
 
 @app.route('/emails/<workshop_id>', methods=['POST'])
 def register_new_email_for_workshop(workshop_id):
+    request_json = request.json
+    request_json['emailId'] = binascii.hexlify(os.urandom(32)).decode('UTF-8')
+    request_json['date'] = datetime.datetime.now()
+
     workshop = get_db().workshops.find_and_modify(
         query={"workshopId": workshop_id},
         update={"$addToSet": {"emails": request.json}}
