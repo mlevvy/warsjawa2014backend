@@ -44,9 +44,7 @@ class UsersEndpointTest(FlaskrWithMongoTest, unittest.TestCase):
 
         # Then response is OK
         self.assertEqual(rv.status_code, 201)
-        ((mailgun_url, ), mailgun_attrs) = requests_mock.post.call_args
-        self.assertEqual("https://api.mailgun.net/v2/system.warsjawa.pl/messages", mailgun_url)
-        self.assertEqual(EMAIL_ADDRESS, mailgun_attrs['data']['to'])
+        assert_mailgun(requests_mock, to=EMAIL_ADDRESS)
 
     @patch('mailgunresource.requests')
     def test_should_save_newly_registered_user_in_db(self, requests_mock):

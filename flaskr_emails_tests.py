@@ -33,7 +33,6 @@ WORKSHOP_IN_DB = {
 EMAILS = {"emails": [{"subject": FIRST_MAIL_SUBJECT, "text": "text", "date": "Thu, 06 Dec 2007 16:29:43 GMT"}]}
 
 REGISTER_EMAIL_REQUEST = """{
-            "emailId": 3,
             "subject": "%s",
             "text": "text"
         }""" % SECOND_MAIL_SUBJECT

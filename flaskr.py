@@ -1,11 +1,16 @@
 # -*- coding: utf-8 -*-
+import re
+import os
+import binascii
+import logging
+import datetime
+
 from flask import Flask
 from pymongo import MongoClient
 from flask import request, g, jsonify
-import os, binascii
+
 import mailgunresource
-import logging
-import datetime
+
 
 app = Flask(__name__)
 handler = logging.StreamHandler()
@@ -24,6 +29,7 @@ def add_new_user():
     request_json = request.json
     request_json['key'] = binascii.hexlify(os.urandom(128)).decode('UTF-8')
     request_json['isConfirmed'] = False
+    request_json['emails'] = []
 
     find_result = get_db().users.find_one({"email": request_json['email']})
     if find_result is None or find_result['isConfirmed'] is False:
@@ -57,7 +63,7 @@ def confirm_new_user():
 @app.route('/emails/<workshop_id>', methods=['POST'])
 def register_new_email_for_workshop(workshop_id):
     request_json = request.json
-    request_json['emailId'] = binascii.hexlify(os.urandom(32)).decode('UTF-8')
+    request_json['emailId'] = generate_email_id()
     request_json['date'] = datetime.datetime.now()
 
     workshop = get_db().workshops.find_and_modify(
@@ -121,6 +127,52 @@ def get_workshop_emails(workshop_id):
 
     json_data = jsonify(emails=trimmed_emails)
     return json_data
+
+
+def get_workshop_id_from_email_address(email_address):
+    regex = re.compile("(.*-)?warsztat-(.+)@system.warsjawa.pl", re.IGNORECASE)
+    match = regex.match(email_address)
+    if match is None:
+        raise AttributeError("%s does not match expected format" % email_address)
+    return match.group(2)
+
+
+def generate_email_id():
+    return binascii.hexlify(os.urandom(32)).decode('UTF-8')
+
+
+@app.route("/mailgun", methods=['POST'])
+def accept_incoming_emails():
+    email_address = request.form['recipient']
+    email_id = generate_email_id()
+    email = {
+        'emailId': email_id,
+        'raw': request.form,
+        'files': request.files,
+        'subject': request.form['subject'],
+        'text': request.form['body-plain']
+    }
+    workshop_id = get_workshop_id_from_email_address(email_address)
+    workshop = get_db().workshops.find_and_modify(
+        query={"workshopId": workshop_id},
+        update={"$push": {"emails": email}}
+    )
+    if workshop is None:
+        return """{"message": "Workshop %s not found"}""" % workshop_id, 404  # TODO send reply that invalid email was sent?
+
+    for user_email in workshop['users']:
+        to_send_data = request.form.to_dict()
+        to_send_data['to'] = user_email
+        to_send_data['cc'] = to_send_data['bcc'] = None
+        mailgunresource.send_mail_raw(
+            data=to_send_data,
+            files=request.files.to_dict()
+        )
+        get_db().users.update(
+            {"email": user_email},
+            {"$push": {"emails": email}}
+        )
+    return jsonify(success=True)
 
 
 if __name__ == '__main__':
