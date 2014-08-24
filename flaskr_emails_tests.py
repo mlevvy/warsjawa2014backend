@@ -4,7 +4,8 @@ import datetime
 
 from flaskr_tests import FlaskrWithMongoTest, assert_mailgun
 from unittest.mock import patch
-from flaskr_users_tests import TEST_CONFIRMED_USER_IN_DB as CONFIRMED_USER_IN_DB, EMAIL_ADDRESS as USER_EMAIL_ADDRESS
+from flaskr_users_tests import TEST_CONFIRMED_USER_IN_DB as CONFIRMED_USER_IN_DB, \
+    TEST_NOT_CONFIRMED_USER_IN_DB as NOT_CONFIRMED_USER_IN_DB, EMAIL_ADDRESS as USER_EMAIL_ADDRESS
 
 FIRST_MAIL_SUBJECT = "Introduction to test workshop"
 SECOND_MAIL_SUBJECT = "Link to repository"
@@ -75,6 +76,17 @@ class EmailsEndpointTest(FlaskrWithMongoTest, unittest.TestCase):
         self.assertIn(USER_EMAIL_ADDRESS, workshop['users'])
 
     @patch('mailgunresource.requests')
+    def test_should_fail_to_save_user_registration_when_not_confirmed_user_selects_workshop(self, requests_mock):
+        # Given:
+        self.user_and_workshop_exists(user=NOT_CONFIRMED_USER_IN_DB)
+
+        # When:
+        response = self.user_selects_workshop()
+
+        # Then
+        self.assertEqual(response.status_code, 412)
+
+    @patch('mailgunresource.requests')
     def test_should_send_emails_for_workshop_when_user_selects_workshop(self, requests_mock):
         # Given:
         self.user_and_workshop_exists()
@@ -129,9 +141,9 @@ class EmailsEndpointTest(FlaskrWithMongoTest, unittest.TestCase):
         workshop = self.db.workshops.find_one()
         self.assertNotIn(USER_EMAIL_ADDRESS, workshop['users'])
 
-    def user_and_workshop_exists(self):
-        self.db.users.insert(CONFIRMED_USER_IN_DB)
-        self.db.workshops.insert(WORKSHOP_IN_DB)
+    def user_and_workshop_exists(self, user=CONFIRMED_USER_IN_DB, workshop=WORKSHOP_IN_DB):
+        self.db.users.insert(user)
+        self.db.workshops.insert(workshop)
 
     def user_selects_workshop(self):
         return self.app.put('/emails/%s/%s' % (WORKSHOP_ID, USER_EMAIL_ADDRESS))

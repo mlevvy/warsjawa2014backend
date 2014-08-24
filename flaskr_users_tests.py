@@ -19,7 +19,8 @@ TEST_NOT_CONFIRMED_USER_IN_DB = {
     "email": EMAIL_ADDRESS,
     "firstName": FIRST_NAME,
     "lastName": LAST_NAME,
-    "key": TEST_KEY, "isConfirmed": False,
+    "key": TEST_KEY,
+    "isConfirmed": False,
     "emails": []
 }
 

@@ -82,6 +82,8 @@ def register_new_user_for_workshop(workshop_id, attender_email):
     user = get_db().users.find_one({"email": attender_email})
     if user is None:
         return """{"message": "User %s not found"}""" % attender_email, 412
+    elif user['isConfirmed'] is not True:
+        return """{"message": "User %s not confirmed"}""" % attender_email, 412
 
     sent_emails_id = []
 
