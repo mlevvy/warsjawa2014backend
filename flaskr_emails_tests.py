@@ -21,9 +21,7 @@ WORKSHOP_IN_DB = {
         "adam@nowak.pl"
     ],
     "users": [
-        USER_EMAIL_ADDRESS,
-        "user2@example.com",
-        "user3@example.com"
+        "user@example.com"
     ],
     "emails": [
         {"emailId": 1, "subject": FIRST_MAIL_SUBJECT, "text": "text", "date": CURRENT_DATE}
@@ -84,6 +82,18 @@ class EmailsEndpointTest(FlaskrWithMongoTest, unittest.TestCase):
 
         # Then
         self.assertEqual(response.status_code, 412)
+
+    @patch('mailgunresource.requests')
+    def test_should_save_user_registration_once_if_when_user_selected_workshop_multipe_times(self, requests_mock):
+        # Given:
+        self.user_and_workshop_exists(user=CONFIRMED_USER_IN_DB)
+        self.user_selects_workshop()
+
+        # When:
+        self.user_selects_workshop()
+
+        # Then
+        self.assertEqual(2, len(self.db.workshops.find_one()['users']))
 
     @patch('mailgunresource.requests')
     def test_should_send_emails_for_workshop_when_user_selects_workshop(self, requests_mock):
