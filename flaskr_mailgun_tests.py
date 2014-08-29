@@ -5,13 +5,14 @@ from unittest.mock import patch
 from flaskr_tests import FlaskrWithMongoTest, assert_mailgun
 from flaskr_users_tests import EMAIL_ADDRESS as USER_EMAIL_ADDRESS
 
-
 WORKSHOP_ID = "test_workshop"
+WORKSHOP_EMAIL_SECRET = "tajny-kod"
 
 CURRENT_DATE = datetime.datetime(2007, 12, 6, 16, 29, 43, 79043)
 
 WORKSHOP_IN_DB = {
     "workshopId": WORKSHOP_ID,
+    "emailSecret": WORKSHOP_EMAIL_SECRET,
     "mentors": [
         "jan@kowalski.pl",
         "adam@nowak.pl"
@@ -28,7 +29,7 @@ EXAMPLE_MAILGUN_POST = {
     'sender': 'presenter@example.com',
     'To': 'Warsjawa',
     'subject': 'test',
-    'recipient': 'test-warsztat-%s@system.warsjawa.pl' % WORKSHOP_ID,
+    'recipient': 'test-workshop-%s@system.warsjawa.pl' % WORKSHOP_EMAIL_SECRET,
     'body-plain': 'text'
 }
 

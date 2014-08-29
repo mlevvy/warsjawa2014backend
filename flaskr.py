@@ -129,8 +129,8 @@ def get_workshop_emails(workshop_id):
     return json_data
 
 
-def get_workshop_id_from_email_address(email_address):
-    regex = re.compile("(.*-)?warsztat-(.+)@system.warsjawa.pl", re.IGNORECASE)
+def get_workshop_secret_from_email_address(email_address):
+    regex = re.compile("(.*-)?workshop-(.*)@system.warsjawa.pl", re.IGNORECASE)
     match = regex.match(email_address)
     if match is None:
         raise AttributeError("%s does not match expected format" % email_address)
@@ -152,13 +152,13 @@ def accept_incoming_emails():
         'subject': request.form['subject'],
         'text': request.form['body-plain']
     }
-    workshop_id = get_workshop_id_from_email_address(email_address)
+    workshop_secret = get_workshop_secret_from_email_address(email_address)
     workshop = get_db().workshops.find_and_modify(
-        query={"workshopId": workshop_id},
+        query={"emailSecret": workshop_secret},
         update={"$push": {"emails": email}}
     )
     if workshop is None:
-        return """{"message": "Workshop %s not found"}""" % workshop_id, 404  # TODO send reply that invalid email was sent?
+        return """{"message": "Workshop %s not found"}""" % workshop_secret, 404  # TODO send reply that invalid email was sent?
 
     for user_email in workshop['users']:
         to_send_data = request.form.to_dict()
