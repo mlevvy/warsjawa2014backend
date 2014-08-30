@@ -59,6 +59,7 @@ class UsersEndpointTest(FlaskrWithMongoTest, unittest.TestCase):
         self.assertEqual(self.db.users.find_one()["firstName"], FIRST_NAME)
         self.assertEqual(self.db.users.find_one()["lastName"], LAST_NAME)
         self.assertEqual(self.db.users.find_one()["isConfirmed"], False)
+        self.assertEqual(self.db.users.find_one()["emails"], [])
         self.assertIsNotNone(self.db.users.find_one()["key"])
 
     @patch('mailgunresource.requests')
