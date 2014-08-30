@@ -23,11 +23,14 @@ def send_workshop_mail(user_mail, subject, text):
 
 
 def send_mail(to, subject, text):
-    return \
-        requests.post(
-            "https://api.mailgun.net/v2/system.warsjawa.pl/messages",
-            auth=("api", os.environ.get('MAILGUN_API_KEY')),
-            data={"from": "Warsjawa <postmaster@system.warsjawa.pl>",
-                  "to": to,
-                  "subject": subject,
-                  "text": text})
+    return send_mail_raw(
+        data={"from": "Warsjawa <postmaster@system.warsjawa.pl>", "to": to, "subject": subject, "text": text}
+    )
+
+
+def send_mail_raw(**kwargs):
+    return requests.post \
+        ("https://api.mailgun.net/v2/system.warsjawa.pl/messages",
+         auth=("api", os.environ.get('MAILGUN_API_KEY')),
+         **kwargs
+        )
