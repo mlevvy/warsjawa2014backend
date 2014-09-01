@@ -4,6 +4,7 @@ import os
 import binascii
 import logging
 import datetime
+from functools import wraps
 
 from flask import Flask
 from pymongo import MongoClient
@@ -15,7 +16,9 @@ import mailgunresource
 app = Flask(__name__)
 handler = logging.StreamHandler()
 handler.setLevel(logging.DEBUG)
+handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
 app.logger.addHandler(handler)
+app.logger.setLevel(logging.DEBUG)
 
 
 def get_db():
@@ -24,7 +27,22 @@ def get_db():
     return g.db
 
 
+def with_logging():
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            app.logger.debug("%s: %s", request, request.get_data(as_text=True, parse_form_data=True))
+            rv = f(*args, **kwargs)
+            app.logger.debug("Response: %s", rv)
+            return rv
+
+        return decorated_function
+
+    return decorator
+
+
 @app.route('/users', methods=['POST'])
+@with_logging()
 def add_new_user():
     request_json = request.json
     request_json['key'] = binascii.hexlify(os.urandom(128)).decode('UTF-8')
@@ -42,6 +60,7 @@ def add_new_user():
 
 
 @app.route('/users', methods=['PUT'])
+@with_logging()
 def confirm_new_user():
     request_json = request.json
 
@@ -61,6 +80,7 @@ def confirm_new_user():
 
 
 @app.route('/emails/<workshop_id>', methods=['POST'])
+@with_logging()
 def register_new_email_for_workshop(workshop_id):
     request_json = request.json
     request_json['emailId'] = generate_email_id()
@@ -77,6 +97,7 @@ def register_new_email_for_workshop(workshop_id):
 
 
 @app.route('/emails/<workshop_id>/<attender_email>', methods=['PUT'])
+@with_logging()
 def register_new_user_for_workshop(workshop_id, attender_email):
     workshop = get_db().workshops.find_and_modify(
         query={"workshopId": workshop_id},
@@ -106,6 +127,7 @@ def register_new_user_for_workshop(workshop_id, attender_email):
 
 
 @app.route('/emails/<workshop_id>/<attender_email>', methods=['DELETE'])
+@with_logging()
 def unregister_user_from_workshop(workshop_id, attender_email):
     update_result = get_db().workshops.update({"workshopId": workshop_id}, {"$pull": {"users": attender_email}})
     if update_result['updatedExisting']:
@@ -113,7 +135,9 @@ def unregister_user_from_workshop(workshop_id, attender_email):
     else:
         return "", 404
 
+
 @app.route("/emails/<workshop_id>", methods=['GET'])
+@with_logging()
 def get_workshop_emails(workshop_id):
     # Well, I could use aggregation, but it is not implemented in mongomock :(
     data = get_db().workshops.find_one({"workshopId": workshop_id}, {"emails.emailId": 0})
@@ -142,6 +166,7 @@ def generate_email_id():
 
 
 @app.route("/mailgun", methods=['POST'])
+@with_logging()
 def accept_incoming_emails():
     email_address = request.form['recipient']
     email_id = generate_email_id()
@@ -170,7 +195,7 @@ def accept_incoming_emails():
         )
         get_db().users.update(
             {"email": user_email},
-            {"$push": {"emails": email}}
+            {"$push": {"emails": email_id}}
         )
     return jsonify(success=True)
 
