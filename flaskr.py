@@ -186,9 +186,14 @@ def accept_incoming_emails():
         return """{"message": "Workshop %s not found"}""" % workshop_secret, 404  # TODO send reply that invalid email was sent?
 
     for user_email in workshop['users']:
-        to_send_data = request.form.to_dict()
+        to_send_data = dict()
+        to_send_data['from'] = request.form['from']
         to_send_data['to'] = user_email
-        to_send_data['cc'] = to_send_data['bcc'] = None
+        to_send_data['subject'] = request.form['subject']
+        to_send_data['text'] = request.form['body-plain']
+        if 'body-html' in request.form:
+            to_send_data['html'] = request.form['body-html']
+
         mailgunresource.send_mail_raw(
             data=to_send_data,
             files=request.files.to_dict()

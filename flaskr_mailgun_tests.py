@@ -25,12 +25,12 @@ WORKSHOP_IN_DB = {
 }
 
 EXAMPLE_MAILGUN_POST = {
-    'From': 'Jan Kowalksi',
-    'sender': 'presenter@example.com',
-    'To': 'Warsjawa',
+    'from': 'Jan Kowalski <jan@kowalski.com>',
+    'to': 'Warsjawa',
     'subject': 'test',
     'recipient': 'test-workshop-%s@system.warsjawa.pl' % WORKSHOP_EMAIL_SECRET,
-    'body-plain': 'text'
+    'body-plain': 'text',
+    'body-html': 'text'
 }
 
 
