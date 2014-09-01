@@ -1,14 +1,27 @@
 import os
 import logging
+
 import requests
 
 
+logging.basicConfig()
+logging.getLogger().setLevel(logging.DEBUG)
 logger = logging.getLogger('mailgun')
 logger.setLevel(logging.DEBUG)
 ch = logging.StreamHandler()
 ch.setLevel(logging.DEBUG)
 ch.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
 logger.addHandler(ch)
+requests_log = logging.getLogger("requests.packages.urllib3")
+requests_log.setLevel(logging.DEBUG)
+requests_log.propagate = True
+
+try:
+    import http.client as http_client
+except ImportError:
+    # Python 2
+    import httplib as http_client
+http_client.HTTPConnection.debuglevel = 1
 
 
 def send_add_new_user(user_registration):
@@ -40,5 +53,5 @@ def send_mail(to, subject, text):
 def send_mail_raw(**kwargs):
     mailgun_result = requests.post("https://api.mailgun.net/v2/system.warsjawa.pl/messages",
                                    auth=("api", os.environ.get('MAILGUN_API_KEY')), **kwargs)
-    logger.debug("Mailgun %3d: %s, %s", mailgun_result.status_code, kwargs, mailgun_result)
+    logger.debug("Mailgun %3d: %s, %s, %s", mailgun_result.status_code, kwargs, mailgun_result, mailgun_result.text)
     return mailgun_result
