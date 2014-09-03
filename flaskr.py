@@ -90,11 +90,11 @@ def simple_response(message, success):
 
 
 def error_response(message):
-    return simple_response(message, True)
+    return simple_response(message, False)
 
 
 def success_response(message):
-    return simple_response(message, False)
+    return simple_response(message, True)
 
 
 def get_db():
