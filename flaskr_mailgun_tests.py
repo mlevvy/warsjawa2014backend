@@ -18,7 +18,7 @@ class MailgunEndpointTest(FlaskrWithMongoTest, unittest.TestCase):
         # Then
         self.assertEqual(1, len(self.db.workshops.find_one()['emails']))
         self.assertEqual(1, requests_mock.post.call_count)
-        assert_mailgun(requests_mock, to=USER_EMAIL_ADDRESS, subject=SECOND_MAIL_SUBJECT)
+        assert_mailgun(requests_mock, to=USER_EMAIL_ADDRESS, subject='Warsjawa - test_workshop: %s' % SECOND_MAIL_SUBJECT)
 
     def mailgun_sends_email(self):
         rv = self.app.post('/mailgun', data=EXAMPLE_MAILGUN_POST)

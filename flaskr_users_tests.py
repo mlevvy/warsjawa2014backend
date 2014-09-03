@@ -89,7 +89,7 @@ class UsersEndpointTest(FlaskrWithMongoTest, unittest.TestCase):
         self.register_test_user()
 
         # Then
-        assert_mailgun(requests_mock, EMAIL_ADDRESS, "Hello")
+        assert_mailgun(requests_mock, EMAIL_ADDRESS, "Welcome to Warsjawa!")
 
     @patch('mailgunresource.requests')
     def test_should_deny_confirmation_by_sending_email_if_user_already_confirmed(self, requests_mock):
@@ -138,7 +138,7 @@ class UsersEndpointTest(FlaskrWithMongoTest, unittest.TestCase):
 
         # Then
         self.assertEqual(rv.status_code, 200)
-        assert_mailgun(requests_mock, EMAIL_ADDRESS, "You are confirmed now")
+        assert_mailgun(requests_mock, EMAIL_ADDRESS, "Warsjawa - additional informations")
 
     @patch('mailgunresource.requests')
     def test_should_allow_confirmation_by_changing_state_if_user_is_not_confirmed(self, requests_mock):

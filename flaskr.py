@@ -8,8 +8,8 @@ from functools import wraps
 from flask import Flask
 from pymongo import MongoClient
 from flask import request, g, jsonify
-from pymongo.son_manipulator import SONManipulator
 
+from emails import MailMessageCreator, EmailMessage, Transform, generate_email_id
 import mailgunresource
 
 
@@ -19,70 +19,6 @@ handler.setLevel(logging.DEBUG)
 handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
 app.logger.addHandler(handler)
 app.logger.setLevel(logging.DEBUG)
-
-
-class EmailMessage():
-    def __init__(self, email_id, sender, subject, text, html=None, date=None, files=None, raw_message=None):
-        self.email_id = email_id
-        self.sender = sender
-        self.subject = subject
-        self.text = text
-        self.html = html
-        self.date = date
-        self.files = files
-        self.raw_message = raw_message
-
-    def as_request_to_send(self, recipient):
-        return {
-            'to': recipient,
-            'from': self.sender,
-            'subject': self.subject,
-            'text': self.text,
-            'html': self.html
-        }
-
-    def as_db_dict(self):
-        return {
-            'from': self.sender,
-            'subject': self.subject,
-            'text': self.text,
-            'html': self.html,
-            'date': self.date,
-            'files': self.files,
-            'raw_message': self.raw_message,
-            '_type': "EmailMessage"
-        }
-
-    def as_response(self):
-        return {
-            'from': self.sender,
-            'subject': self.subject,
-            'text': self.text,
-            'date': self.date
-        }
-
-    @classmethod
-    def from_db_dict(cls, value):
-        return EmailMessage(**value)
-
-
-class Transform(SONManipulator):
-    def transform_incoming(self, son, collection):
-        for (key, value) in son.items():
-            if isinstance(value, EmailMessage):
-                son[key] = value.as_db_dict()
-            elif isinstance(value, dict):
-                son[key] = self.transform_incoming(value, collection)
-        return son
-
-    def transform_outgoing(self, son, collection):
-        for (key, value) in son.items():
-            if isinstance(value, dict):
-                if "_type" in value and value["_type"] == "EmailMessage":
-                    son[key] = EmailMessage.from_db_dict(value)
-                else:
-                    son[key] = self.transform_outgoing(value, collection)
-        return son
 
 
 def simple_response(message, success):
@@ -137,7 +73,8 @@ def add_new_user():
     find_result = get_db().users.find_one({"email": request_json['email']})
     if find_result is None or find_result['isConfirmed'] is False:
         get_db().users.update({"email": request_json['email']}, {"$set": request_json}, upsert=True)
-        mailgunresource.send_add_new_user(request_json)
+        message = MailMessageCreator.user_registration(request_json['name'], request_json['key'])
+        message.send(to=request_json['email'])
         return success_response("Registration email sent."), 201
     else:
         mailgunresource.send_deny_new_user(request_json)
@@ -170,7 +107,8 @@ def confirm_new_user():
         {"$set": {"isConfirmed": True}})
 
     if find_result['n'] > 0:
-        mailgunresource.send_confirm_user(request_json)
+        message = MailMessageCreator.user_confirmation(user['name'], user['key'])
+        message.send(to=request_json['email'])
         return success_response("User is confirmed now."), 200
     else:
         mailgunresource.send_deny_confirm_user(request_json)
@@ -195,7 +133,7 @@ def register_new_user_for_workshop(workshop_id, attender_email):
     if attender_email in workshop['users']:
         return error_response("User %s is already registered for %s" % (attender_email, workshop_id)), 304
 
-    ensure_mails_were_sent_to_users(workshop['emails'], [attender_email])
+    ensure_mails_were_sent_to_users(workshop['emails'], [attender_email], workshop)
     return success_response("User %s registered for %s" % (attender_email, workshop_id)), 200
 
 
@@ -231,10 +169,6 @@ def get_workshop_secret_from_email_address(email_address):
     return match.group(2)
 
 
-def generate_email_id():
-    return binascii.hexlify(os.urandom(32)).decode('UTF-8')
-
-
 @app.route("/mailgun", methods=['POST'])
 @with_logging()
 def accept_incoming_emails():
@@ -254,11 +188,11 @@ def accept_incoming_emails():
     if workshop is None:
         return error_response("Workshop not found"), 404  # TODO send reply that invalid email was sent?
 
-    ensure_mails_were_sent_to_users([email], workshop['users'])
+    ensure_mails_were_sent_to_users([email], workshop['users'], workshop)
     return success_response("Email processed.")
 
 
-def ensure_email_is_sent_to_user(email_message, user_email):
+def ensure_email_is_sent_to_user(email_message, user_email, workshop):
     update_result = get_db().users.update(
         {"email": user_email,
          "emails": {"$not": email_message.email_id}},
@@ -267,16 +201,14 @@ def ensure_email_is_sent_to_user(email_message, user_email):
     if update_result['n'] == 0:  # no documents updated so user not exists or already seen this mail
         return
     else:
-        request_data = email_message.as_request_to_send(recipient=user_email)
-        mailgunresource.send_mail_raw(
-            data=request_data
-        )
+        message_to_send = MailMessageCreator.forward_workshop_message(email_message, workshop)
+        message_to_send.send(to=user_email)
 
 
-def ensure_mails_were_sent_to_users(email_messages, users_emails):
+def ensure_mails_were_sent_to_users(email_messages, users_emails, workshop):
     for email_message in email_messages:
         for user_email in users_emails:
-            ensure_email_is_sent_to_user(email_message, user_email)
+            ensure_email_is_sent_to_user(email_message, user_email, workshop)
 
 
 if __name__ == '__main__':

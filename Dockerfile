@@ -10,4 +10,4 @@ RUN pip3 install -r /app/requirements.txt
 
 EXPOSE 80
 
-CMD python3 /app/flaskr.py
+CMD cd /app && python3 flaskr.py

@@ -3,6 +3,7 @@ import datetime
 import unittest
 
 import mongomock
+from emails import EmailMessage
 
 import flaskr
 
@@ -15,7 +16,7 @@ SECOND_MAIL_SUBJECT = "Link to repository"
 WORKSHOP_ID = "test_workshop"
 WORKSHOP_EMAIL_SECRET = "tajny-kod"
 CURRENT_DATE = datetime.datetime(2007, 12, 6, 16, 29, 43, 79043)
-EMAIL_MESSAGE = flaskr.EmailMessage(1, "source@example.com", FIRST_MAIL_SUBJECT, "text", date=CURRENT_DATE)
+EMAIL_MESSAGE = EmailMessage("source@example.com", FIRST_MAIL_SUBJECT, "text", date=CURRENT_DATE, email_id=1)
 
 
 def user_in_db(confirmed=False):

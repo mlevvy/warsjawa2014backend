@@ -75,7 +75,7 @@ class EmailsEndpointTest(FlaskrWithMongoTest, unittest.TestCase):
         self.user_selects_workshop()
 
         # Then
-        assert_mailgun(requests_mock, subject=FIRST_MAIL_SUBJECT)
+        assert_mailgun(requests_mock, subject='Warsjawa - test_workshop: %s' % FIRST_MAIL_SUBJECT)
 
     @patch('mailgunresource.requests')
     def test_should_not_send_emails_already_sent_to_this_user(self, requests_mock):
@@ -90,7 +90,7 @@ class EmailsEndpointTest(FlaskrWithMongoTest, unittest.TestCase):
 
         # Then
         self.assertEqual(2, requests_mock.post.call_count)
-        assert_mailgun(requests_mock, subject=SECOND_MAIL_SUBJECT)
+        assert_mailgun(requests_mock, subject="Warsjawa - test_workshop: %s" % SECOND_MAIL_SUBJECT)
 
 
     @patch('mailgunresource.requests')
