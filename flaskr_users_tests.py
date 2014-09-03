@@ -158,7 +158,7 @@ class UsersEndpointTest(FlaskrWithMongoTest, unittest.TestCase):
         rv = self.confirm_test_user()
 
         # Then
-        self.assertEqual(rv.status_code, 201)
+        self.assertEqual(rv.status_code, 200)
         assert_mailgun(requests_mock, EMAIL_ADDRESS, "You are confirmed now")
 
     @patch('mailgunresource.requests')

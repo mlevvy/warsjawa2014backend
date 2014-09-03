@@ -90,19 +90,24 @@ def confirm_new_user():
     if not is_valid_confirm_user_request(request_json):
         return error_response("Invalid request. Should contain only 'email' and 'key'."), 400
 
-    if get_db().users.find({"email": request_json['email']}).count() == 0:
+    user = get_db().users.find_one({"email": request_json['email']})
+    if user is None:
         return error_response("User not found"), 404
 
+    if user['isConfirmed']:
+        mailgunresource.send_deny_confirm_user(request_json)
+        return error_response("User already confirmed."), 304
+
     find_result = get_db().users.update(
-        {"email": request_json['email'], "key": request_json['key'], "isConfirmed": False},
+        {"email": request_json['email'], "key": request_json['key']},
         {"$set": {"isConfirmed": True}})
 
     if find_result['n'] > 0:
         mailgunresource.send_confirm_user(request_json)
-        return success_response("User is confirmed now."), 201
+        return success_response("User is confirmed now."), 200
     else:
         mailgunresource.send_deny_confirm_user(request_json)
-        return error_response("Invalid key."), 304
+        return error_response("Invalid key."), 403
 
 
 @app.route('/emails/<workshop_id>', methods=['POST'])
