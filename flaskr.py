@@ -54,6 +54,8 @@ def with_logging():
 
 
 def is_valid_new_user_request(json):
+    if not isinstance(json, dict):
+        return False
     if set(json.keys()) != {"email", "name"}:
         return False
     return True
@@ -62,7 +64,7 @@ def is_valid_new_user_request(json):
 @app.route('/users', methods=['POST'])
 @with_logging()
 def add_new_user():
-    request_json = request.json
+    request_json = request.get_json(force=True, silent=True)
     if not is_valid_new_user_request(request_json):
         return error_response("Invalid request. Should contain only 'email' and 'name'."), 400
     request_json['key'] = binascii.hexlify(os.urandom(128)).decode('UTF-8')
@@ -81,6 +83,8 @@ def add_new_user():
 
 
 def is_valid_confirm_user_request(json):
+    if not isinstance(json, dict):
+        return False
     if set(json.keys()) != {"email", "key"}:
         return False
     return True
@@ -89,7 +93,7 @@ def is_valid_confirm_user_request(json):
 @app.route('/users', methods=['PUT'])
 @with_logging()
 def confirm_new_user():
-    request_json = request.json
+    request_json = request.get_json(force=True, silent=True)
     if not is_valid_confirm_user_request(request_json):
         return error_response("Invalid request. Should contain only 'email' and 'key'."), 400
 

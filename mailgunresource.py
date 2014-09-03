@@ -1,5 +1,7 @@
+import datetime
 import os
 import logging
+from flask import g
 
 import requests
 
@@ -39,4 +41,13 @@ def send_mail_raw(**kwargs):
     mailgun_result = requests.post("https://api.mailgun.net/v2/system.warsjawa.pl/messages",
                                    auth=("api", os.environ.get('MAILGUN_API_KEY')), **kwargs)
     logger.debug("Mailgun %3d: %s, %s, %s", mailgun_result.status_code, kwargs, mailgun_result, mailgun_result.text)
+    if mailgun_result.status_code != 200 and hasattr(g, 'db'):
+        g.db.mail_errors.insert({
+            'request': kwargs,
+            'result': {
+                'status_code': mailgun_result.status_code,
+                'text': mailgun_result.text
+            },
+            'date': datetime.datetime.now()
+        })
     return mailgun_result

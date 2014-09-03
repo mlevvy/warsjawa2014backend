@@ -2,7 +2,6 @@ import binascii
 import os
 import string
 
-from pymongo.son_manipulator import SONManipulator
 import yaml
 
 import mailgunresource
@@ -100,6 +99,7 @@ class EmailMessage():
             'date': self.date,
             'files': self.files,
             'raw_message': self.raw_message,
+            'email_id': self.email_id,
             '_type': "EmailMessage"
         }
 
