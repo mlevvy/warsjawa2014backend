@@ -67,12 +67,12 @@ class MailMessageCreator():
             subject=substitute_variables(template['subject'], data),
             text=substitute_variables(template['body-plain'], data),
             html=substitute_variables(template['body-html'], data),
-            date = mentor_message.date
+            date=mentor_message.date
         )
 
 
 class EmailMessage():
-    def __init__(self, sender, subject, text, html=None, date=None, files=None, raw_message=None, email_id=None):
+    def __init__(self, subject, text, sender=None, html=None, date=None, files=None, raw_message=None, email_id=None):
         self.email_id = email_id
         self.sender = sender
         self.subject = subject
@@ -118,24 +118,11 @@ class EmailMessage():
 
     @classmethod
     def from_db_dict(cls, value):
-        return EmailMessage(**value)
-
-
-class Transform(SONManipulator):
-    def transform_incoming(self, son, collection):
-        for (key, value) in son.items():
-            if isinstance(value, EmailMessage):
-                son[key] = value.as_db_dict()
-            elif isinstance(value, dict):
-                son[key] = self.transform_incoming(value, collection)
-        return son
-
-    def transform_outgoing(self, son, collection):
-        for (key, value) in son.items():
-            if isinstance(value, dict):
-                if "_type" in value and value["_type"] == "EmailMessage":
-                    son[key] = EmailMessage.from_db_dict(value)
-                else:
-                    son[key] = self.transform_outgoing(value, collection)
-        return son
-
+        if isinstance(value, EmailMessage):
+            return value
+        elif isinstance(value, dict):
+            attrs = {k: value[k] for k in
+                     ["sender", "subject", "text", "html", "date", "files", "raw_message", "email_id"] if k in value}
+            return EmailMessage(**attrs)
+        else:
+            raise AttributeError("Invalid value: %s of type %s" % (value, type(value)))

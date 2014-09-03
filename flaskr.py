@@ -9,7 +9,7 @@ from flask import Flask
 from pymongo import MongoClient
 from flask import request, g, jsonify
 
-from emails import MailMessageCreator, EmailMessage, Transform, generate_email_id
+from emails import MailMessageCreator, EmailMessage, generate_email_id
 import mailgunresource
 
 
@@ -36,7 +36,6 @@ def success_response(message):
 def get_db():
     if not hasattr(g, 'db'):
         g.db = MongoClient('db', 27017).warsjawa
-        g.db.add_son_manipulator(Transform())
     return g.db
 
 
@@ -132,7 +131,7 @@ def register_new_user_for_workshop(workshop_id, attender_email):
         return error_response("Workshop %s not found" % workshop_id), 404
     if attender_email in workshop['users']:
         return error_response("User %s is already registered for %s" % (attender_email, workshop_id)), 304
-
+    workshop['emails'] = [EmailMessage.from_db_dict(e) for e in workshop['emails']]
     ensure_mails_were_sent_to_users(workshop['emails'], [attender_email], workshop)
     return success_response("User %s registered for %s" % (attender_email, workshop_id)), 200
 
@@ -156,7 +155,7 @@ def get_workshop_emails(workshop_id):
     if data is None:
         return error_response("Workshop %s not found" % workshop_id), 404
 
-    emails = [email.as_response() for email in data['emails']]
+    emails = [EmailMessage.from_db_dict(email).as_response() for email in data['emails']]
     json_data = jsonify(emails=emails)
     return json_data
 
@@ -183,7 +182,7 @@ def accept_incoming_emails():
     workshop_secret = get_workshop_secret_from_email_address(email_address)
     workshop = get_db().workshops.find_and_modify(
         query={"emailSecret": workshop_secret},
-        update={"$push": {"emails": email}}
+        update={"$push": {"emails": email.as_db_dict()}}
     )
     if workshop is None:
         return error_response("Workshop not found"), 404  # TODO send reply that invalid email was sent?
@@ -195,7 +194,7 @@ def accept_incoming_emails():
 def ensure_email_is_sent_to_user(email_message, user_email, workshop):
     update_result = get_db().users.update(
         {"email": user_email,
-         "emails": {"$not": email_message.email_id}},
+         "emails": {"$ne": email_message.email_id}},
         {"$addToSet": {"emails": email_message.email_id}}
     )
     if update_result['n'] == 0:  # no documents updated so user not exists or already seen this mail
