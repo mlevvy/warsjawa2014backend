@@ -5,20 +5,18 @@ from unittest.mock import patch
 from flaskr_tests import FlaskrWithMongoTest, assert_mailgun
 
 # Example data
-FIRST_NAME = "Jan"
-LAST_NAME = "Kowalski"
+NAME = "Jan Kowalski"
 EMAIL_ADDRESS = "jan@kowalski.com"
 TEST_KEY = "TEST_KEY"
 
 # Example request
-REGISTRATION_REQUEST = """{"email":"%s", "firstName":"%s", "lastName": "%s"}""" % (EMAIL_ADDRESS, FIRST_NAME, LAST_NAME)
+REGISTRATION_REQUEST = """{"email":"%s", "name":"%s"}""" % (EMAIL_ADDRESS, NAME)
 CONFIRMATION_REQUEST = """{"email":"%s", "key":"%s"}""" % (EMAIL_ADDRESS, TEST_KEY)
 
 # Example database rows
 TEST_NOT_CONFIRMED_USER_IN_DB = {
     "email": EMAIL_ADDRESS,
-    "firstName": FIRST_NAME,
-    "lastName": LAST_NAME,
+    "name": NAME,
     "key": TEST_KEY,
     "isConfirmed": False,
     "emails": []
@@ -26,8 +24,7 @@ TEST_NOT_CONFIRMED_USER_IN_DB = {
 
 TEST_CONFIRMED_USER_IN_DB = {
     "email": EMAIL_ADDRESS,
-    "firstName": FIRST_NAME,
-    "lastName": LAST_NAME,
+    "name": NAME,
     "key": TEST_KEY,
     "isConfirmed": True,
     "emails": []
@@ -56,8 +53,7 @@ class UsersEndpointTest(FlaskrWithMongoTest, unittest.TestCase):
         # Then row to database with random key is added
         self.assertEqual(self.db.users.count(), 1)
         self.assertEqual(self.db.users.find_one()["email"], EMAIL_ADDRESS)
-        self.assertEqual(self.db.users.find_one()["firstName"], FIRST_NAME)
-        self.assertEqual(self.db.users.find_one()["lastName"], LAST_NAME)
+        self.assertEqual(self.db.users.find_one()["name"], NAME)
         self.assertEqual(self.db.users.find_one()["isConfirmed"], False)
         self.assertEqual(self.db.users.find_one()["emails"], [])
         self.assertIsNotNone(self.db.users.find_one()["key"])
@@ -73,7 +69,7 @@ class UsersEndpointTest(FlaskrWithMongoTest, unittest.TestCase):
         # Then Key is changed
         self.assertEqual(self.db.users.count(), 1)
         user_in_db = self.db.users.find_one()
-        self.assertDictContainsSubset({"email": EMAIL_ADDRESS, "firstName": FIRST_NAME, "lastName": LAST_NAME},
+        self.assertDictContainsSubset({"email": EMAIL_ADDRESS, "name": NAME},
                                       user_in_db)
         self.assertIsNotNone(user_in_db["key"])
         self.assertIsNot(user_in_db["key"], TEST_KEY)
@@ -90,7 +86,7 @@ class UsersEndpointTest(FlaskrWithMongoTest, unittest.TestCase):
         self.assertEqual(self.db.users.count(), 1)
         user_in_db = self.db.users.find_one()
         self.assertDictContainsSubset(
-            {"email": EMAIL_ADDRESS, "firstName": FIRST_NAME, "lastName": LAST_NAME, "key": TEST_KEY},
+            {"email": EMAIL_ADDRESS, "name": NAME, "key": TEST_KEY},
             user_in_db)
 
     @patch('mailgunresource.requests')
@@ -140,7 +136,7 @@ class UsersEndpointTest(FlaskrWithMongoTest, unittest.TestCase):
         self.assertEqual(self.db.users.count(), 1)
         user_in_db = self.db.users.find_one()
         self.assertDictContainsSubset(
-            {"email": EMAIL_ADDRESS, "firstName": FIRST_NAME, "lastName": LAST_NAME, "key": TEST_KEY,
+            {"email": EMAIL_ADDRESS, "name": NAME, "key": TEST_KEY,
              "isConfirmed": True},
             user_in_db)
 
@@ -176,7 +172,7 @@ class UsersEndpointTest(FlaskrWithMongoTest, unittest.TestCase):
         self.assertEqual(self.db.users.count(), 1)
         user_in_db = self.db.users.find_one()
         self.assertDictContainsSubset(
-            {"email": EMAIL_ADDRESS, "firstName": FIRST_NAME, "lastName": LAST_NAME, "key": TEST_KEY,
+            {"email": EMAIL_ADDRESS, "name": NAME, "key": TEST_KEY,
              "isConfirmed": True},
             user_in_db)
 

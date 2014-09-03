@@ -21,6 +21,18 @@ app.logger.addHandler(handler)
 app.logger.setLevel(logging.DEBUG)
 
 
+def simple_response(message, success):
+    return jsonify({"success": success, "message": message})
+
+
+def error_response(message):
+    return simple_response(message, True)
+
+
+def success_response(message):
+    return simple_response(message, False)
+
+
 def get_db():
     if not hasattr(g, 'db'):
         g.db = MongoClient('db', 27017).warsjawa
@@ -35,16 +47,22 @@ def with_logging():
             rv = f(*args, **kwargs)
             app.logger.debug("Response: %s", rv)
             return rv
-
         return decorated_function
-
     return decorator
+
+
+def is_valid_new_user_request(json):
+    if set(json.keys()) != {"email", "name"}:
+        return False
+    return True
 
 
 @app.route('/users', methods=['POST'])
 @with_logging()
 def add_new_user():
     request_json = request.json
+    if not is_valid_new_user_request(request_json):
+        return error_response("Invalid request. Should contain only 'email' and 'name'."), 400
     request_json['key'] = binascii.hexlify(os.urandom(128)).decode('UTF-8')
     request_json['isConfirmed'] = False
     request_json['emails'] = []
@@ -53,19 +71,27 @@ def add_new_user():
     if find_result is None or find_result['isConfirmed'] is False:
         get_db().users.update({"email": request_json['email']}, {"$set": request_json}, upsert=True)
         mailgunresource.send_add_new_user(request_json)
-        return "", 201
+        return success_response("Registration email sent."), 201
     else:
         mailgunresource.send_deny_new_user(request_json)
-        return "", 304
+        return error_response("User already registered."), 304
+
+
+def is_valid_confirm_user_request(json):
+    if set(json.keys()) != {"email", "key"}:
+        return False
+    return True
 
 
 @app.route('/users', methods=['PUT'])
 @with_logging()
 def confirm_new_user():
     request_json = request.json
+    if not is_valid_confirm_user_request(request_json):
+        return error_response("Invalid request. Should contain only 'email' and 'key'."), 400
 
     if get_db().users.find({"email": request_json['email']}).count() == 0:
-        return """{"message": "User not found"}""", 404
+        return error_response("User not found"), 404
 
     find_result = get_db().users.update(
         {"email": request_json['email'], "key": request_json['key'], "isConfirmed": False},
@@ -73,10 +99,10 @@ def confirm_new_user():
 
     if find_result['n'] > 0:
         mailgunresource.send_confirm_user(request_json)
-        return "", 201
+        return success_response("User is confirmed now."), 201
     else:
         mailgunresource.send_deny_confirm_user(request_json)
-        return "", 304
+        return error_response("Invalid key."), 304
 
 
 @app.route('/emails/<workshop_id>', methods=['POST'])
@@ -91,9 +117,9 @@ def register_new_email_for_workshop(workshop_id):
         update={"$addToSet": {"emails": request.json}}
     )
     if workshop is None:
-        return """{"message": "Workshop %s not found"}""" % workshop_id, 404
+        return error_response("Workshop %s not found." % workshop_id), 404
     else:
-        return "", 201
+        return success_response("User registered."), 201
 
 
 @app.route('/emails/<workshop_id>/<attender_email>', methods=['PUT'])
@@ -104,13 +130,13 @@ def register_new_user_for_workshop(workshop_id, attender_email):
         update={"$addToSet": {"users": attender_email}}
     )
     if workshop is None:
-        return """{"message": "Workshop %s not found"}""" % workshop_id, 404
+        return error_response("Workshop %s not found" % workshop_id), 404
 
     user = get_db().users.find_one({"email": attender_email})
     if user is None:
-        return """{"message": "User %s not found"}""" % attender_email, 412
+        return error_response("User %s not found" % attender_email), 412
     elif user['isConfirmed'] is not True:
-        return """{"message": "User %s not confirmed"}""" % attender_email, 412
+        return error_response("User %s not confirmed" % attender_email), 412
 
     sent_emails_id = []
 
@@ -123,7 +149,7 @@ def register_new_user_for_workshop(workshop_id, attender_email):
         {"_id": user['_id']},
         {"$push": {"emails": {"$each": sent_emails_id}}}
     )
-    return "", 200
+    return success_response("User %s registered for %s" % (attender_email, workshop_id)), 200
 
 
 @app.route('/emails/<workshop_id>/<attender_email>', methods=['DELETE'])
@@ -131,9 +157,9 @@ def register_new_user_for_workshop(workshop_id, attender_email):
 def unregister_user_from_workshop(workshop_id, attender_email):
     update_result = get_db().workshops.update({"workshopId": workshop_id}, {"$pull": {"users": attender_email}})
     if update_result['updatedExisting']:
-        return "", 200
+        return success_response("Registration of user %s for %s is cancelled" % (attender_email, workshop_id)), 200
     else:
-        return "", 404
+        return error_response("Workshop %s not found" % workshop_id), 404
 
 
 @app.route("/emails/<workshop_id>", methods=['GET'])
@@ -143,7 +169,7 @@ def get_workshop_emails(workshop_id):
     data = get_db().workshops.find_one({"workshopId": workshop_id}, {"emails.emailId": 0})
 
     if data is None:
-        return "", 404
+        return error_response("Workshop %s not found" % workshop_id), 404
 
     trimmed_emails = data['emails']
     for email in trimmed_emails:
@@ -183,7 +209,7 @@ def accept_incoming_emails():
         update={"$push": {"emails": email}}
     )
     if workshop is None:
-        return """{"message": "Workshop %s not found"}""" % workshop_secret, 404  # TODO send reply that invalid email was sent?
+        return error_response("Workshop not found"), 404  # TODO send reply that invalid email was sent?
 
     for user_email in workshop['users']:
         to_send_data = dict()
@@ -202,7 +228,7 @@ def accept_incoming_emails():
             {"email": user_email},
             {"$push": {"emails": email_id}}
         )
-    return jsonify(success=True)
+    return success_response("Email processed.")
 
 
 if __name__ == '__main__':
