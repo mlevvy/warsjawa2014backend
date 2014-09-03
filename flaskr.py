@@ -3,12 +3,12 @@ import re
 import os
 import binascii
 import logging
-import datetime
 from functools import wraps
 
 from flask import Flask
 from pymongo import MongoClient
 from flask import request, g, jsonify
+from pymongo.son_manipulator import SONManipulator
 
 import mailgunresource
 
@@ -19,6 +19,70 @@ handler.setLevel(logging.DEBUG)
 handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
 app.logger.addHandler(handler)
 app.logger.setLevel(logging.DEBUG)
+
+
+class EmailMessage():
+    def __init__(self, email_id, sender, subject, text, html=None, date=None, files=None, raw_message=None):
+        self.email_id = email_id
+        self.sender = sender
+        self.subject = subject
+        self.text = text
+        self.html = html
+        self.date = date
+        self.files = files
+        self.raw_message = raw_message
+
+    def as_request_to_send(self, recipient):
+        return {
+            'to': recipient,
+            'from': self.sender,
+            'subject': self.subject,
+            'text': self.text,
+            'html': self.html
+        }
+
+    def as_db_dict(self):
+        return {
+            'from': self.sender,
+            'subject': self.subject,
+            'text': self.text,
+            'html': self.html,
+            'date': self.date,
+            'files': self.files,
+            'raw_message': self.raw_message,
+            '_type': "EmailMessage"
+        }
+
+    def as_response(self):
+        return {
+            'from': self.sender,
+            'subject': self.subject,
+            'text': self.text,
+            'date': self.date
+        }
+
+    @classmethod
+    def from_db_dict(cls, value):
+        return EmailMessage(**value)
+
+
+class Transform(SONManipulator):
+    def transform_incoming(self, son, collection):
+        for (key, value) in son.items():
+            if isinstance(value, EmailMessage):
+                son[key] = value.as_db_dict()
+            elif isinstance(value, dict):
+                son[key] = self.transform_incoming(value, collection)
+        return son
+
+    def transform_outgoing(self, son, collection):
+        for (key, value) in son.items():
+            if isinstance(value, dict):
+                if "_type" in value and value["_type"] == "EmailMessage":
+                    son[key] = EmailMessage.from_db_dict(value)
+                else:
+                    son[key] = self.transform_outgoing(value, collection)
+        return son
 
 
 def simple_response(message, success):
@@ -36,6 +100,7 @@ def success_response(message):
 def get_db():
     if not hasattr(g, 'db'):
         g.db = MongoClient('db', 27017).warsjawa
+        g.db.add_son_manipulator(Transform())
     return g.db
 
 
@@ -47,7 +112,9 @@ def with_logging():
             rv = f(*args, **kwargs)
             app.logger.debug("Response: %s", rv)
             return rv
+
         return decorated_function
+
     return decorator
 
 
@@ -110,50 +177,25 @@ def confirm_new_user():
         return error_response("Invalid key."), 403
 
 
-@app.route('/emails/<workshop_id>', methods=['POST'])
-@with_logging()
-def register_new_email_for_workshop(workshop_id):
-    request_json = request.json
-    request_json['emailId'] = generate_email_id()
-    request_json['date'] = datetime.datetime.now()
-
-    workshop = get_db().workshops.find_and_modify(
-        query={"workshopId": workshop_id},
-        update={"$addToSet": {"emails": request.json}}
-    )
-    if workshop is None:
-        return error_response("Workshop %s not found." % workshop_id), 404
-    else:
-        return success_response("User registered."), 201
-
-
 @app.route('/emails/<workshop_id>/<attender_email>', methods=['PUT'])
 @with_logging()
 def register_new_user_for_workshop(workshop_id, attender_email):
-    workshop = get_db().workshops.find_and_modify(
-        query={"workshopId": workshop_id},
-        update={"$addToSet": {"users": attender_email}}
-    )
-    if workshop is None:
-        return error_response("Workshop %s not found" % workshop_id), 404
-
     user = get_db().users.find_one({"email": attender_email})
     if user is None:
         return error_response("User %s not found" % attender_email), 412
     elif user['isConfirmed'] is not True:
         return error_response("User %s not confirmed" % attender_email), 412
 
-    sent_emails_id = []
-
-    for mail in workshop['emails']:
-        if mail['emailId'] not in user['emails']:
-            mailgunresource.send_workshop_mail(attender_email, mail['subject'], mail['text'])
-            sent_emails_id.append(mail['emailId'])
-
-    get_db().users.update(
-        {"_id": user['_id']},
-        {"$push": {"emails": {"$each": sent_emails_id}}}
+    workshop = get_db().workshops.find_and_modify(
+        query={"workshopId": workshop_id},
+        update={"$addToSet": {"users": attender_email}}
     )
+    if workshop is None:
+        return error_response("Workshop %s not found" % workshop_id), 404
+    if attender_email in workshop['users']:
+        return error_response("User %s is already registered for %s" % (attender_email, workshop_id)), 304
+
+    ensure_mails_were_sent_to_users(workshop['emails'], [attender_email])
     return success_response("User %s registered for %s" % (attender_email, workshop_id)), 200
 
 
@@ -176,11 +218,8 @@ def get_workshop_emails(workshop_id):
     if data is None:
         return error_response("Workshop %s not found" % workshop_id), 404
 
-    trimmed_emails = data['emails']
-    for email in trimmed_emails:
-        email.pop("emailId", None)
-
-    json_data = jsonify(emails=trimmed_emails)
+    emails = [email.as_response() for email in data['emails']]
+    json_data = jsonify(emails=emails)
     return json_data
 
 
@@ -200,14 +239,13 @@ def generate_email_id():
 @with_logging()
 def accept_incoming_emails():
     email_address = request.form['recipient']
-    email_id = generate_email_id()
-    email = {
-        'emailId': email_id,
-        'raw': request.form,
-        'files': request.files,
-        'subject': request.form['subject'],
-        'text': request.form['body-plain']
-    }
+    email = EmailMessage(
+        email_id=generate_email_id(),
+        sender=request.form['from'],
+        subject=request.form['subject'],
+        text=request.form['body-plain'],
+        html=request.form['body-html']
+    )
     workshop_secret = get_workshop_secret_from_email_address(email_address)
     workshop = get_db().workshops.find_and_modify(
         query={"emailSecret": workshop_secret},
@@ -216,24 +254,29 @@ def accept_incoming_emails():
     if workshop is None:
         return error_response("Workshop not found"), 404  # TODO send reply that invalid email was sent?
 
-    for user_email in workshop['users']:
-        to_send_data = dict()
-        to_send_data['from'] = request.form['from']
-        to_send_data['to'] = user_email
-        to_send_data['subject'] = request.form['subject']
-        to_send_data['text'] = request.form['body-plain']
-        if 'body-html' in request.form:
-            to_send_data['html'] = request.form['body-html']
-
-        mailgunresource.send_mail_raw(
-            data=to_send_data,
-            files=request.files.to_dict()
-        )
-        get_db().users.update(
-            {"email": user_email},
-            {"$push": {"emails": email_id}}
-        )
+    ensure_mails_were_sent_to_users([email], workshop['users'])
     return success_response("Email processed.")
+
+
+def ensure_email_is_sent_to_user(email_message, user_email):
+    update_result = get_db().users.update(
+        {"email": user_email,
+         "emails": {"$not": email_message.email_id}},
+        {"$addToSet": {"emails": email_message.email_id}}
+    )
+    if update_result['n'] == 0:  # no documents updated so user not exists or already seen this mail
+        return
+    else:
+        request_data = email_message.as_request_to_send(recipient=user_email)
+        mailgunresource.send_mail_raw(
+            data=request_data
+        )
+
+
+def ensure_mails_were_sent_to_users(email_messages, users_emails):
+    for email_message in email_messages:
+        for user_email in users_emails:
+            ensure_email_is_sent_to_user(email_message, user_email)
 
 
 if __name__ == '__main__':

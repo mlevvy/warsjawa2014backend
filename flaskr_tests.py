@@ -1,9 +1,62 @@
 # -*- coding: utf-8 -*-
+import datetime
 import unittest
 
 import mongomock
 
 import flaskr
+
+
+NAME = "Jan Kowalski"
+EMAIL_ADDRESS = "jan@kowalski.com"
+TEST_KEY = "TEST_KEY"
+FIRST_MAIL_SUBJECT = "Introduction to test workshop"
+SECOND_MAIL_SUBJECT = "Link to repository"
+WORKSHOP_ID = "test_workshop"
+WORKSHOP_EMAIL_SECRET = "tajny-kod"
+CURRENT_DATE = datetime.datetime(2007, 12, 6, 16, 29, 43, 79043)
+EMAIL_MESSAGE = flaskr.EmailMessage(1, "source@example.com", FIRST_MAIL_SUBJECT, "text", date=CURRENT_DATE)
+
+
+def user_in_db(confirmed=False):
+    return {
+        "email": EMAIL_ADDRESS,
+        "name": NAME,
+        "key": TEST_KEY,
+        "isConfirmed": confirmed,
+        "emails": []
+    }
+
+
+def workshop_in_db(with_user, with_mail):
+    return {
+        "workshopId": WORKSHOP_ID,
+        "emailSecret": WORKSHOP_EMAIL_SECRET,
+        "mentors": [
+            "jan@kowalski.pl",
+            "adam@nowak.pl"
+        ],
+        "users": [EMAIL_ADDRESS] if with_user else [],
+        "emails": [EMAIL_MESSAGE] if with_mail else []
+    }
+
+
+EMAILS = {"emails": [{"from": "source@example.com", "subject": FIRST_MAIL_SUBJECT, "text": "text",
+                      "date": "Thu, 06 Dec 2007 16:29:43 GMT"}]}
+
+REGISTER_EMAIL_REQUEST = """{
+            "subject": "%s",
+            "text": "text"
+        }""" % SECOND_MAIL_SUBJECT
+
+EXAMPLE_MAILGUN_POST = {
+    'from': 'Jan Kowalski <jan@kowalski.com>',
+    'to': 'Warsjawa',
+    'subject': SECOND_MAIL_SUBJECT,
+    'recipient': 'test-workshop-%s@system.warsjawa.pl' % WORKSHOP_EMAIL_SECRET,
+    'body-plain': 'text',
+    'body-html': 'text'
+}
 
 
 class FlaskrWithMongoTest():

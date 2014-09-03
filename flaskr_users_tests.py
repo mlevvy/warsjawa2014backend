@@ -2,33 +2,12 @@
 import unittest
 from unittest.mock import patch
 
-from flaskr_tests import FlaskrWithMongoTest, assert_mailgun
+from flaskr_tests import FlaskrWithMongoTest, assert_mailgun, NAME, EMAIL_ADDRESS, TEST_KEY, user_in_db as test_user
 
-# Example data
-NAME = "Jan Kowalski"
-EMAIL_ADDRESS = "jan@kowalski.com"
-TEST_KEY = "TEST_KEY"
 
 # Example request
 REGISTRATION_REQUEST = """{"email":"%s", "name":"%s"}""" % (EMAIL_ADDRESS, NAME)
 CONFIRMATION_REQUEST = """{"email":"%s", "key":"%s"}""" % (EMAIL_ADDRESS, TEST_KEY)
-
-# Example database rows
-TEST_NOT_CONFIRMED_USER_IN_DB = {
-    "email": EMAIL_ADDRESS,
-    "name": NAME,
-    "key": TEST_KEY,
-    "isConfirmed": False,
-    "emails": []
-}
-
-TEST_CONFIRMED_USER_IN_DB = {
-    "email": EMAIL_ADDRESS,
-    "name": NAME,
-    "key": TEST_KEY,
-    "isConfirmed": True,
-    "emails": []
-}
 
 
 class UsersEndpointTest(FlaskrWithMongoTest, unittest.TestCase):
@@ -61,7 +40,7 @@ class UsersEndpointTest(FlaskrWithMongoTest, unittest.TestCase):
     @patch('mailgunresource.requests')
     def test_should_update_key_in_database_if_already_registered(self, requests_mock):
         # Given: database
-        self.db.users.insert(TEST_NOT_CONFIRMED_USER_IN_DB)
+        self.db.users.insert(test_user(confirmed=False))
 
         # When: Post to users
         self.register_test_user()
@@ -77,7 +56,7 @@ class UsersEndpointTest(FlaskrWithMongoTest, unittest.TestCase):
     @patch('mailgunresource.requests')
     def test_should_not_update_key_in_database_if_already_registered(self, requests_mock):
         # Given: database
-        self.db.users.insert(TEST_CONFIRMED_USER_IN_DB)
+        self.db.users.insert(test_user(confirmed=True))
 
         # When: Post to users
         self.register_test_user()
@@ -92,7 +71,7 @@ class UsersEndpointTest(FlaskrWithMongoTest, unittest.TestCase):
     @patch('mailgunresource.requests')
     def test_should_send_deny_email_if_already_registered(self, requests_mock):
         # Given: database
-        self.db.users.insert(TEST_CONFIRMED_USER_IN_DB)
+        self.db.users.insert(test_user(confirmed=True))
 
         # When: Post to users
         rv = self.register_test_user()
@@ -104,7 +83,7 @@ class UsersEndpointTest(FlaskrWithMongoTest, unittest.TestCase):
     @patch('mailgunresource.requests')
     def test_should_resend_email_with_new_key_if_is_not_confirmed(self, requests_mock):
         # Given: database
-        self.db.users.insert(TEST_NOT_CONFIRMED_USER_IN_DB)
+        self.db.users.insert(test_user(confirmed=False))
 
         # When: Post to users
         self.register_test_user()
@@ -115,7 +94,7 @@ class UsersEndpointTest(FlaskrWithMongoTest, unittest.TestCase):
     @patch('mailgunresource.requests')
     def test_should_deny_confirmation_by_sending_email_if_user_already_confirmed(self, requests_mock):
         # Given: database
-        self.db.users.insert(TEST_CONFIRMED_USER_IN_DB)
+        self.db.users.insert(test_user(confirmed=True))
 
         # When: Confirm user
         rv = self.confirm_test_user()
@@ -127,7 +106,7 @@ class UsersEndpointTest(FlaskrWithMongoTest, unittest.TestCase):
     @patch('mailgunresource.requests')
     def test_should_deny_confirmation_by_not_changing_the_key_if_user_already_confirmed(self, requests_mock):
         # Given: database
-        self.db.users.insert(TEST_CONFIRMED_USER_IN_DB)
+        self.db.users.insert(test_user(confirmed=True))
 
         # When: Confirm user
         self.confirm_test_user()
@@ -152,7 +131,7 @@ class UsersEndpointTest(FlaskrWithMongoTest, unittest.TestCase):
 
     @patch('mailgunresource.requests')
     def test_should_allow_confirmation_by_sending_email_if_user_is_not_confirmed(self, requests_mock):
-        self.db.users.insert(TEST_NOT_CONFIRMED_USER_IN_DB)
+        self.db.users.insert(test_user(confirmed=False))
 
         # When: Confirm user
         rv = self.confirm_test_user()
@@ -163,7 +142,7 @@ class UsersEndpointTest(FlaskrWithMongoTest, unittest.TestCase):
 
     @patch('mailgunresource.requests')
     def test_should_allow_confirmation_by_changing_state_if_user_is_not_confirmed(self, requests_mock):
-        self.db.users.insert(TEST_NOT_CONFIRMED_USER_IN_DB)
+        self.db.users.insert(test_user(confirmed=False))
 
         # When: Confirm user
         self.confirm_test_user()
