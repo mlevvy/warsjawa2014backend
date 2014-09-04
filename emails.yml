@@ -58,15 +58,16 @@ mentor_welcome:
   subject: "Contact with your students for workshop - ${workshopName}"
   body-plain: |
     Hi,
-    congratulations for becoming workshop mentor. You can now send emails for all your registered members for workshop #{workshopName}. To do this send an email for #{workshopEmail}.
-    
+    congratulations for becoming workshop mentor. You can now send emails for all your registered members for workshop *${workshopName}*. To do this send an email for ${workshopEmail}.
+
     Regards,
     Warsjawa Team
     contact@warsjawa.pl
   body-html: |
     Hi,
-    congratulations for becoming workshop mentor. You can now send emails for all your registered members for workshop #{workshopName}. To do this send <a href="mailto:#{workshopEmail}">email Me</a> 
-    
+    <p>congratulations for becoming workshop mentor. You can now send emails for all your registered members for workshop <em>${workshopName}</em>.</p> 
+    <p>To do this send an email <a href="mailto:${workshopEmail}">this address</a>.<p>
+
     Regards,
     Warsjawa Team
     contact@warsjawa.pl

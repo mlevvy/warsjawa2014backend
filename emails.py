@@ -1,10 +1,13 @@
 import binascii
+import datetime
 import os
 import string
 
 import yaml
 
 import mailgunresource
+
+WARSJAVA_SENDER_EMAIL = 'Warsjawa <contact@warsjawa.pl>'
 
 
 def read_templates():
@@ -23,6 +26,10 @@ def substitute_variables(template, data):
     return string.Template(template).safe_substitute(**data)
 
 
+def create_email_address_for_workshop(email_secret):
+    return "workshop-%s@system.warsjawa.pl" % email_secret
+
+
 class MailMessageCreator():
     @classmethod
     def user_registration(cls, user_name, user_key):
@@ -32,10 +39,11 @@ class MailMessageCreator():
             'userCode': user_key
         }
         return EmailMessage(
-            sender='Warsjawa <contact@warsjawa.pl>',
+            sender=WARSJAVA_SENDER_EMAIL,
             subject=substitute_variables(template['subject'], data),
             text=substitute_variables(template['body-plain'], data),
-            html=substitute_variables(template['body-html'], data)
+            html=substitute_variables(template['body-html'], data),
+            date=datetime.datetime.now()
         )
 
     @classmethod
@@ -46,10 +54,11 @@ class MailMessageCreator():
             'userCode': user_key
         }
         return EmailMessage(
-            sender='Warsjawa <contact@warsjawa.pl>',
+            sender=WARSJAVA_SENDER_EMAIL,
             subject=substitute_variables(template['subject'], data),
             text=substitute_variables(template['body-plain'], data),
-            html=substitute_variables(template['body-html'], data)
+            html=substitute_variables(template['body-html'], data),
+            date=datetime.datetime.now()
         )
 
     @classmethod
@@ -67,6 +76,21 @@ class MailMessageCreator():
             text=substitute_variables(template['body-plain'], data),
             html=substitute_variables(template['body-html'], data),
             date=mentor_message.date
+        )
+
+    @classmethod
+    def mentor_welcome_email(cls, workshop_name, email_secret):
+        template = templates["mentor_welcome"]
+        data = {
+            'workshopName': workshop_name,
+            'workshopEmail': create_email_address_for_workshop(email_secret)
+        }
+        return EmailMessage(
+            sender=WARSJAVA_SENDER_EMAIL,
+            subject=substitute_variables(template['subject'], data),
+            text=substitute_variables(template['body-plain'], data),
+            html=substitute_variables(template['body-html'], data),
+            date=datetime.datetime.now()
         )
 
 

@@ -8,6 +8,7 @@ from functools import wraps
 from flask import Flask
 from pymongo import MongoClient
 from flask import request, g, jsonify
+import yaml
 
 from emails import MailMessageCreator, EmailMessage, generate_email_id
 import mailgunresource
@@ -37,6 +38,39 @@ def get_db():
     if not hasattr(g, 'db'):
         g.db = MongoClient('db', 27017).warsjawa
     return g.db
+
+
+def load_workshops():
+    def generate_workshop_email_secret():
+        return binascii.hexlify(os.urandom(8)).decode('UTF-8')
+
+    def create_workshop(yaml_data):
+        new_workshop = {
+            'workshopId': yaml_data['workshopId'],
+            'emailSecret': generate_workshop_email_secret(),
+            'name': yaml_data['name'],
+            'mentors': yaml_data['mentors'],
+            'users': [],
+            'emails': []
+        }
+        return new_workshop
+
+    yaml_file = open("workshops.yml", encoding="utf-8")
+    workshops = yaml.load(yaml_file)['workshops']
+    app.logger.info("There are %d workshops" % len(workshops))
+    for workshop_data in workshops:
+        workshop_in_db = get_db().workshops.find_one({"workshopId": workshop_data['workshopId']})
+        if workshop_in_db is not None:
+            app.logger.debug("Skipping %s" % workshop_data)
+            continue  # skip already inserted
+        else:
+            workshop_in_db = create_workshop(workshop_data)
+            get_db().workshops.insert(workshop_in_db)
+            welcome_message = MailMessageCreator.mentor_welcome_email(workshop_in_db['name'],
+                                                                      workshop_in_db['emailSecret'])
+            for email in workshop_in_db['mentors']:
+                welcome_message.send(to=email)
+            app.logger.info("Added %s" % workshop_data)
 
 
 def with_logging():
@@ -215,5 +249,6 @@ def ensure_mails_were_sent_to_users(email_messages, users_emails, workshop):
 
 
 if __name__ == '__main__':
-    app.run(host="0.0.0.0", port=80)
-    app.run()
+    with app.app_context():
+        load_workshops()
+    app.run(host="0.0.0.0", port=8080)
