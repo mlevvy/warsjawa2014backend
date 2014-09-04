@@ -53,3 +53,20 @@ workshop_mail:
     ${htmlEmailBody}
     <hr/>
     This email was sent by Warsjava. If you don't want to receive this messages contact us at <a href="mailto:contact@warsjawa.pl">contact@warsjawa.pl</a>.
+
+mentor_welcome:
+  subject: "Contact with your students for workshop - ${workshopName}"
+  body-plain: |
+    Hi,
+    congratulations for becoming workshop mentor. You can now send emails for all your registered members for workshop #{workshopName}. To do this send an email for #{workshopEmail}.
+    
+    Regards,
+    Warsjawa Team
+    contact@warsjawa.pl
+  body-html: |
+    Hi,
+    congratulations for becoming workshop mentor. You can now send emails for all your registered members for workshop #{workshopName}. To do this send <a href="mailto:#{workshopEmail}">email Me</a> 
+    
+    Regards,
+    Warsjawa Team
+    contact@warsjawa.pl
