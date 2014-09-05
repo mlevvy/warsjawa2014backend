@@ -251,4 +251,4 @@ def ensure_mails_were_sent_to_users(email_messages, users_emails, workshop):
 if __name__ == '__main__':
     with app.app_context():
         load_workshops()
-    app.run(host="0.0.0.0", port=8080)
+    app.run(host="0.0.0.0", port=80)
