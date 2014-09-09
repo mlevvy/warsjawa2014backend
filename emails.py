@@ -77,7 +77,7 @@ class MailMessageCreator():
             sender=mentor_message.sender,
             subject=substitute_variables(template['subject'], data),
             text=substitute_variables(template['body-plain'], data),
-            html=substitute_variables(template['body-html'], data),
+            html=(substitute_variables(template['body-html'], data) if data['htmlEmailBody'] is not None else None),
             date=mentor_message.date
         )
 

@@ -213,8 +213,8 @@ def accept_incoming_emails():
         email_id=generate_email_id(),
         sender=request.form['from'],
         subject=request.form['subject'],
-        text=request.form['body-plain'],
-        html=request.form['body-html']
+        text=request.form.get('body-plain'),
+        html=request.form.get('body-html')
     )
     workshop_secret = get_workshop_secret_from_email_address(email_address)
     workshop = get_db().workshops.find_and_modify(
@@ -225,6 +225,7 @@ def accept_incoming_emails():
         return error_response("Workshop not found"), 404  # TODO send reply that invalid email was sent?
 
     ensure_mails_were_sent_to_users([email], workshop['users'], workshop)
+    ensure_mail_were_sent_to_mentors(email, workshop['mentors'], workshop)
     return success_response("Email processed.")
 
 
@@ -245,6 +246,12 @@ def ensure_mails_were_sent_to_users(email_messages, users_emails, workshop):
     for email_message in email_messages:
         for user_email in users_emails:
             ensure_email_is_sent_to_user(email_message, user_email, workshop)
+
+
+def ensure_mail_were_sent_to_mentors(email_message, mentor_emails, workshop):
+    for mentor_email in mentor_emails:
+        message_to_send = MailMessageCreator.forward_workshop_message(email_message, workshop)
+        message_to_send.send(to=mentor_email)
 
 
 if __name__ == '__main__':
