@@ -8,6 +8,7 @@ from functools import wraps
 from flask import Flask
 from pymongo import MongoClient
 from flask import request, g, jsonify
+import yaml
 
 from emails import MailMessageCreator, EmailMessage, generate_email_id
 import mailgunresource
@@ -37,6 +38,39 @@ def get_db():
     if not hasattr(g, 'db'):
         g.db = MongoClient('db', 27017).warsjawa
     return g.db
+
+
+def load_workshops():
+    def generate_workshop_email_secret():
+        return binascii.hexlify(os.urandom(8)).decode('UTF-8')
+
+    def create_workshop(yaml_data):
+        new_workshop = {
+            'workshopId': yaml_data['workshopId'],
+            'emailSecret': generate_workshop_email_secret(),
+            'name': yaml_data['name'],
+            'mentors': yaml_data['mentors'],
+            'users': [],
+            'emails': []
+        }
+        return new_workshop
+
+    yaml_file = open("workshops.yml", encoding="utf-8")
+    workshops = yaml.load(yaml_file)['workshops']
+    app.logger.info("There are %d workshops" % len(workshops))
+    for workshop_data in workshops:
+        workshop_in_db = get_db().workshops.find_one({"workshopId": workshop_data['workshopId']})
+        if workshop_in_db is not None:
+            app.logger.debug("Skipping %s" % workshop_data)
+            continue  # skip already inserted
+        else:
+            workshop_in_db = create_workshop(workshop_data)
+            get_db().workshops.insert(workshop_in_db)
+            welcome_message = MailMessageCreator.mentor_welcome_email(workshop_in_db['name'],
+                                                                      workshop_in_db['emailSecret'])
+            for email in workshop_in_db['mentors']:
+                welcome_message.send(to=email)
+            app.logger.info("Added %s" % workshop_data)
 
 
 def with_logging():
@@ -74,7 +108,7 @@ def add_new_user():
     find_result = get_db().users.find_one({"email": request_json['email']})
     if find_result is None or find_result['isConfirmed'] is False:
         get_db().users.update({"email": request_json['email']}, {"$set": request_json}, upsert=True)
-        message = MailMessageCreator.user_registration(request_json['name'], request_json['key'])
+        message = MailMessageCreator.user_registration(request_json['name'], request_json['key'], request_json['email'])
         message.send(to=request_json['email'])
         return success_response("Registration email sent."), 201
     else:
@@ -101,17 +135,16 @@ def confirm_new_user():
     if user is None:
         return error_response("User not found"), 404
 
-    if user['isConfirmed']:
-        mailgunresource.send_deny_confirm_user(request_json)
-        return error_response("User already confirmed."), 304
+    was_already_confirmed = user['isConfirmed'] is True
 
     find_result = get_db().users.update(
         {"email": request_json['email'], "key": request_json['key']},
         {"$set": {"isConfirmed": True}})
 
     if find_result['n'] > 0:
-        message = MailMessageCreator.user_confirmation(user['name'], user['key'])
-        message.send(to=request_json['email'])
+        if not was_already_confirmed:
+            message = MailMessageCreator.user_confirmation(user['name'], user['key'], request_json['email'])
+            message.send(to=request_json['email'])
         return success_response("User is confirmed now."), 200
     else:
         mailgunresource.send_deny_confirm_user(request_json)
@@ -180,8 +213,8 @@ def accept_incoming_emails():
         email_id=generate_email_id(),
         sender=request.form['from'],
         subject=request.form['subject'],
-        text=request.form['body-plain'],
-        html=request.form['body-html']
+        text=request.form.get('body-plain'),
+        html=request.form.get('body-html')
     )
     workshop_secret = get_workshop_secret_from_email_address(email_address)
     workshop = get_db().workshops.find_and_modify(
@@ -192,6 +225,7 @@ def accept_incoming_emails():
         return error_response("Workshop not found"), 404  # TODO send reply that invalid email was sent?
 
     ensure_mails_were_sent_to_users([email], workshop['users'], workshop)
+    ensure_mail_were_sent_to_mentors(email, workshop['mentors'], workshop)
     return success_response("Email processed.")
 
 
@@ -214,6 +248,13 @@ def ensure_mails_were_sent_to_users(email_messages, users_emails, workshop):
             ensure_email_is_sent_to_user(email_message, user_email, workshop)
 
 
+def ensure_mail_were_sent_to_mentors(email_message, mentor_emails, workshop):
+    for mentor_email in mentor_emails:
+        message_to_send = MailMessageCreator.forward_workshop_message(email_message, workshop)
+        message_to_send.send(to=mentor_email)
+
+
 if __name__ == '__main__':
+    with app.app_context():
+        load_workshops()
     app.run(host="0.0.0.0", port=80)
-    app.run()
