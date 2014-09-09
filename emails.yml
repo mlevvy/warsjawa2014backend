@@ -28,16 +28,17 @@ user_confirmation:
   subject: Warsjawa - additional informations
   body-plain: |
     Hi, ${name}
-    you can manage your workshops at any time on your profile page: http://warsjawa.pl/workshops/#login/${userEmail}/${userCode} .
-    Please visit registration page between 20-24 of September for confirmation purposes. If you don’t do this you will be deleted for all your workshops. Don’t worry. We'll remind you about this.
+    You can manage your workshops at any time using this link: http://warsjawa.pl/workshops/#login/${userEmail}/${userCode} .
+    Please visit registration page between 20th and 24th of September for confirmation purposes. Keep in mind that in case of lack of confirmation your registration to all workshops will be removed.
+    Don’t worry, we will remind you about that!
 
     Regards,
     Warsjawa Team
     contact@warsjawa.pl
   body-html: |
     Hi, ${name}<br/>
-    <p>you can manage your workshops at any time using this <a href="http://warsjawa.pl/workshops/#login/${userEmail}/${userCode}">link</a>.</p>
-    <p>Please visit registration page between 20-24 of September for confirmation purposes. If you don’t do this you will be deleted for all your workshops. Don’t worry. We'll remind you about this.</p>
+    <p>You can manage your workshops at any time using this <a href="http://warsjawa.pl/workshops/#login/${userEmail}/${userCode}">link</a>.</p>
+    <p>Please visit registration page between 20th and 24th of September for confirmation purposes. Keep in mind that in case of lack of confirmation your registration to all workshops will be removed. Don’t worry, we will remind you about that!</p>
 
     Regards,<br/>
     Warsjawa Team<br/>
