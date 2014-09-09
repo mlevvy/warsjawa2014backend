@@ -2,6 +2,7 @@ import binascii
 import datetime
 import os
 import string
+from urllib.parse import quote_plus as escape_uri
 
 import yaml
 
@@ -32,11 +33,12 @@ def create_email_address_for_workshop(email_secret):
 
 class MailMessageCreator():
     @classmethod
-    def user_registration(cls, user_name, user_key):
+    def user_registration(cls, user_name, user_key, user_email):
         template = templates["user_registration"]
         data = {
             'name': user_name,
-            'userCode': user_key
+            'userCode': user_key,
+            'userEmail': escape_uri(user_email)
         }
         return EmailMessage(
             sender=WARSJAVA_SENDER_EMAIL,
@@ -47,11 +49,12 @@ class MailMessageCreator():
         )
 
     @classmethod
-    def user_confirmation(cls, user_name, user_key):
+    def user_confirmation(cls, user_name, user_key, user_email):
         template = templates["user_confirmation"]
         data = {
             'name': user_name,
-            'userCode': user_key
+            'userCode': user_key,
+            'userEmail': escape_uri(user_email)
         }
         return EmailMessage(
             sender=WARSJAVA_SENDER_EMAIL,

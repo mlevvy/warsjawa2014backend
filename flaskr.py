@@ -108,7 +108,7 @@ def add_new_user():
     find_result = get_db().users.find_one({"email": request_json['email']})
     if find_result is None or find_result['isConfirmed'] is False:
         get_db().users.update({"email": request_json['email']}, {"$set": request_json}, upsert=True)
-        message = MailMessageCreator.user_registration(request_json['name'], request_json['key'])
+        message = MailMessageCreator.user_registration(request_json['name'], request_json['key'], request_json['email'])
         message.send(to=request_json['email'])
         return success_response("Registration email sent."), 201
     else:
@@ -144,7 +144,7 @@ def confirm_new_user():
         {"$set": {"isConfirmed": True}})
 
     if find_result['n'] > 0:
-        message = MailMessageCreator.user_confirmation(user['name'], user['key'])
+        message = MailMessageCreator.user_confirmation(user['name'], user['key'], request_json['email'])
         message.send(to=request_json['email'])
         return success_response("User is confirmed now."), 200
     else:

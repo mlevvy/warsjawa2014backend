@@ -24,17 +24,11 @@ http_client.HTTPConnection.debuglevel = 1
 
 
 def send_deny_new_user(user_registration):
-    return send_mail(user_registration['email'], "We've got a problem here !", "Lorem Ipsum")
+    logger.error('User %s, was trying to register again. But he was already registered.', user_registration['email'])
 
 
 def send_deny_confirm_user(user_registration):
-    return send_mail(user_registration['email'], "You can not confirm twice", "Lorem Ipsum")
-
-
-def send_mail(to, subject, text):
-    return send_mail_raw(
-        data={"from": "Warsjawa <postmaster@system.warsjawa.pl>", "to": to, "subject": subject, "text": text}
-    )
+    logger.error('User %s, was trying to confirm again. But he was already confirmed.', user_registration['email'])
 
 
 def send_mail_raw(**kwargs):

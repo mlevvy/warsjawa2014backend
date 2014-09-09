@@ -7,41 +7,41 @@ user_registration:
     Warsjawa is a 100% workshop conference. You have to select workshops and register on each workshop individually. Also, you will receive emails from your workshop mentors with instructions. Please prepare for your workshops.
     If something bad happens and you not gonna make it, show respect for the mentor and unregister from the workshop.
 
-    To login to your account and register for the workshops visit http://warsjawa.pl/workshops/${userCode}.
+    To login to your account and register for the workshops visit http://warsjawa.pl/workshops/#login/${userEmail}/${userCode}.
 
     Regards,
     Warsjawa Team
     contact@warsjawa.pl
   body-html: |
-    Hi, ${name}
-    Thanks for the registration. You can now login to your account.
+    Hi, ${name}<br/>
+    <p>Thanks for the registration. You can now login to your account.</p>
 
-    Warsjawa is a 100% workshop conference. You have to select workshops and register on each workshop individually. Also, you will receive emails from your workshop mentors with instructions. Please prepare for your workshops.
-    If something bad happens and you not gonna make it, show respect for the mentor and unregister from the workshop.
+    <p>Warsjawa is a 100% workshop conference. You have to select workshops and register on each workshop individually. Also, you will receive emails from your workshop mentors with instructions. Please prepare for your workshops.
+    If something bad happens and you not gonna make it, show respect for the mentor and unregister from the workshop.</p>
 
-    To login to your account and register for the workshops <a href="http://warsjawa.pl/workshops/${userCode}">go to your profile.</a>
+    <p>To login to your account and register for the workshops <a href="http://warsjawa.pl/workshops/#login/${userEmail}/${userCode}">go to your profile.</a></p>
 
-    Regards,
-    Warsjawa Team
-    contact@warsjawa.pl
+    Regards,<br/>
+    Warsjawa Team<br/>
+    contact@warsjawa.pl<br/>
 user_confirmation:
   subject: Warsjawa - additional informations
   body-plain: |
     Hi, ${name}
-    you can manage your workshops at any time on your profile page: http://warsjawa.pl/workshops/${userCode} .
+    you can manage your workshops at any time on your profile page: http://warsjawa.pl/workshops/#login/${userEmail}/${userCode} .
     Please visit registration page between 20-24 of September for confirmation purposes. If you don’t do this you will be deleted for all your workshops. Don’t worry. We'll remind you about this.
 
     Regards,
     Warsjawa Team
     contact@warsjawa.pl
   body-html: |
-    Hi, ${name}
-    you can manage your workshops at any time using this <a href="http://warsjawa.pl/workshops/${code}">link</a>.
-    Please visit registration page between 20-24 of September for confirmation purposes. If you don’t do this you will be deleted for all your workshops. Don’t worry. We'll remind you about this.
+    Hi, ${name}<br/>
+    <p>you can manage your workshops at any time using this <a href="http://warsjawa.pl/workshops/#login/${userEmail}/${userCode}">link</a>.</p>
+    <p>Please visit registration page between 20-24 of September for confirmation purposes. If you don’t do this you will be deleted for all your workshops. Don’t worry. We'll remind you about this.</p>
 
-    Regards,
-    Warsjawa Team
-    contact@warsjawa.pl
+    Regards,<br/>
+    Warsjawa Team<br/>
+    contact@warsjawa.pl<br/>
 workshop_mail:
   subject: "Warsjawa - ${workshopName}: ${originalSubject}"
   body-plain: |
@@ -68,6 +68,6 @@ mentor_welcome:
     <p>congratulations for becoming workshop mentor. You can now send emails for all your registered members for workshop <em>${workshopName}</em>.</p> 
     <p>To do this send an email <a href="mailto:${workshopEmail}">this address</a>.<p>
 
-    Regards,
-    Warsjawa Team
-    contact@warsjawa.pl
+    Regards,<br/>
+    Warsjawa Team<br/>
+    contact@warsjawa.pl<br/>
