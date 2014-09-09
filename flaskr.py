@@ -135,17 +135,16 @@ def confirm_new_user():
     if user is None:
         return error_response("User not found"), 404
 
-    if user['isConfirmed']:
-        mailgunresource.send_deny_confirm_user(request_json)
-        return error_response("User already confirmed."), 304
+    was_already_confirmed = user['isConfirmed'] is True
 
     find_result = get_db().users.update(
         {"email": request_json['email'], "key": request_json['key']},
         {"$set": {"isConfirmed": True}})
 
     if find_result['n'] > 0:
-        message = MailMessageCreator.user_confirmation(user['name'], user['key'], request_json['email'])
-        message.send(to=request_json['email'])
+        if not was_already_confirmed:
+            message = MailMessageCreator.user_confirmation(user['name'], user['key'], request_json['email'])
+            message.send(to=request_json['email'])
         return success_response("User is confirmed now."), 200
     else:
         mailgunresource.send_deny_confirm_user(request_json)
