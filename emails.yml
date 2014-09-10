@@ -7,7 +7,7 @@ user_registration:
     Warsjawa is a 100% workshop formula conference. You have to select and register on each workshop individually. After that, you will receive emails from your workshop mentors with instructions. Please prepare for your workshops!
     If you are not able to participate in particular workshop remember to unregister. Please respect our mentors!
 
-    To register for the workshops go to your profile: http://warsjawa.pl/workshops/#login/${userEmail}/${userCode}.
+    To register for the workshops go to your profile: http://warsjawa.pl/workshops/${userEmail}/${userCode}.
 
     Regards,
     Warsjawa Team
@@ -19,7 +19,7 @@ user_registration:
     <p>Warsjawa is a 100% workshop formula conference. You have to select and register on each workshop individually. After that, you will receive emails from your workshop mentors with instructions. Please prepare for your workshops!
     If you are not able to participate in particular workshop remember to unregister. Please respect our mentors!</p>
 
-    <p>To register for the workshops <a href="http://warsjawa.pl/workshops/#login/${userEmail}/${userCode}">go to your profile.</a></p>
+    <p>To register for the workshops <a href="http://warsjawa.pl/workshops/${userEmail}/${userCode}">go to your profile.</a></p>
 
     Regards,<br/>
     Warsjawa Team<br/>
@@ -28,7 +28,7 @@ user_confirmation:
   subject: Warsjawa - additional informations
   body-plain: |
     Hi, ${name}
-    You can manage your workshops at any time using this link: http://warsjawa.pl/workshops/#login/${userEmail}/${userCode} .
+    You can manage your workshops at any time using this link: http://warsjawa.pl/workshops/${userEmail}/${userCode} .
     Please visit registration page between 20th and 24th of September for confirmation purposes. Keep in mind that in case of lack of confirmation your registration to all workshops will be removed.
     Don’t worry, we will remind you about that!
 
@@ -37,7 +37,7 @@ user_confirmation:
     contact@warsjawa.pl
   body-html: |
     Hi, ${name}<br/>
-    <p>You can manage your workshops at any time using this <a href="http://warsjawa.pl/workshops/#login/${userEmail}/${userCode}">link</a>.</p>
+    <p>You can manage your workshops at any time using this <a href="http://warsjawa.pl/workshops/${userEmail}/${userCode}">link</a>.</p>
     <p>Please visit registration page between 20th and 24th of September for confirmation purposes. Keep in mind that in case of lack of confirmation your registration to all workshops will be removed. Don’t worry, we will remind you about that!</p>
 
     Regards,<br/>
