@@ -119,7 +119,7 @@ class EmailMessage():
 
     def as_db_dict(self):
         return {
-            'from': self.sender,
+            'sender': self.sender,
             'subject': self.subject,
             'text': self.text,
             'html': self.html,
