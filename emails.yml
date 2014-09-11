@@ -59,7 +59,7 @@ mentor_welcome:
   subject: "Contact with your students for workshop - ${workshopName}"
   body-plain: |
     Hi,
-    congratulations on becoming a workshop mentor! You can now send emails to all members registered for your workshop *${workshopName}*. To do this, just send an email to the following address: ${workshopEmail}.
+    congratulations on becoming a workshop mentor! You can now send emails to all members registered for your workshop *${workshopName}*. To do this, just send an email to the following address: ${workshopEmail}. Attachments are not supported, because we store e-mails to users who register in the future.
 
     Regards,
     Warsjawa Team
@@ -67,7 +67,7 @@ mentor_welcome:
   body-html: |
     Hi,
     <p>congratulations on becoming a workshop mentor! You can now send emails to all members registered for your workshop <em>${workshopName}</em>.</p>
-    <p>To do this, just send an email to <a href="mailto:${workshopEmail}">this address</a>.<p>
+    <p>To do this, just send an email to <a href="mailto:${workshopEmail}">this address</a>. Attachments are not supported, because we store e-mails to users who register in the future.<p>
 
     Regards,<br/>
     Warsjawa Team<br/>
