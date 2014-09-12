@@ -22,16 +22,18 @@ app.logger.addHandler(handler)
 app.logger.setLevel(logging.DEBUG)
 
 
-def simple_response(message, success):
-    return jsonify({"success": success, "message": message})
+def simple_response(message, success, **kwargs):
+    response = {"success": success, "message": message}
+    response.update(kwargs)
+    return jsonify(response)
 
 
 def error_response(message):
     return simple_response(message, False)
 
 
-def success_response(message):
-    return simple_response(message, True)
+def success_response(message, **kwargs):
+    return simple_response(message, True, **kwargs)
 
 
 def get_db():
@@ -145,7 +147,7 @@ def confirm_new_user():
         if not was_already_confirmed:
             message = MailMessageCreator.user_confirmation(user['name'], user['key'], request_json['email'])
             message.send(to=request_json['email'])
-        return success_response("User is confirmed now."), 200
+        return success_response("User is confirmed now.", name=user['name']), 200
     else:
         mailgunresource.send_deny_confirm_user(request_json)
         return error_response("Invalid key."), 403
