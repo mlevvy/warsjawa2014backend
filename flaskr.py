@@ -1,13 +1,15 @@
 # -*- coding: utf-8 -*-
+import datetime
+import pprint
 import re
 import os
 import binascii
 import logging
 from functools import wraps
 
-from flask import Flask
+from flask import Flask, make_response, Response
 from pymongo import MongoClient
-from flask import request, g, jsonify
+from flask import request, g, jsonify, json
 import yaml
 
 from emails import MailMessageCreator, EmailMessage, generate_email_id
@@ -81,7 +83,15 @@ def with_logging():
         def decorated_function(*args, **kwargs):
             app.logger.debug("%s: %s", request, request.get_data(as_text=True, parse_form_data=True))
             rv = f(*args, **kwargs)
-            app.logger.debug("Response: %s", rv)
+            response = None
+            if isinstance(rv, Response):
+                response = rv
+            elif type(rv) is tuple and isinstance(rv[0], Response):
+                response = rv[0]
+            if response is not None:
+                app.logger.debug("Response: %s, %s", rv, response.get_data())
+            else:
+                app.logger.debug("Response: %s", rv)
             return rv
 
         return decorated_function
@@ -93,6 +103,14 @@ def is_valid_new_user_request(json):
     if not isinstance(json, dict):
         return False
     if set(json.keys()) != {"email", "name"}:
+        return False
+    return True
+
+
+def is_valid_vote_request(json):
+    if not isinstance(json, dict):
+        return False
+    if set(json.keys()) != {"mac_urządzenia", "id_opaski", "is_positive", "time_stamp"}:
         return False
     return True
 
@@ -254,6 +272,82 @@ def ensure_mail_were_sent_to_mentors(email_message, mentor_emails, workshop):
     for mentor_email in mentor_emails:
         message_to_send = MailMessageCreator.forward_workshop_message(email_message, workshop)
         message_to_send.send(to=mentor_email)
+
+
+@app.route("/contacts", methods=['GET'])
+@with_logging()
+def get_all_users():
+    users = get_db().users.find({"isConfirmed": True}, {"name": 1, "email": 1})
+    result = [{"name": user['name'], "email": user['email']} for user in users]
+    response = make_response(json.dumps(result))
+    response.content_type = "application/json"
+    return response
+
+
+@app.route('/contact/<user_email>/<tag_id>', methods=['PUT'])
+@with_logging()
+def associate_tag_with_user(user_email, tag_id):
+    user = get_db().users.find_one({"email": user_email})
+    if user is None:
+        return error_response('User with email "%s" not found' % user_email), 404
+    if 'nfcTags' in user and tag_id in user['nfcTags']:
+        return success_response('User "%s" is already associated with this tag' % user_email), 200
+    user = get_db().users.find_one({"nfcTags": tag_id})
+    if user is not None:
+        return error_response('Other user is already associated with tag "%s"' % tag_id), 409
+
+    update_result = get_db().users.update({"email": user_email}, {"$addToSet": {"nfcTags": tag_id}})
+    if not update_result['ok'] == 1:
+        return error_response('Unable to associate tag "%s" with user "%s"' % (tag_id, user_email)), 500
+    return success_response('User "%s" is associated with tag "%s"' % (user_email, tag_id)), 201
+
+
+def find_user_for_tag(tag_id):
+    return get_db().users.find_one({"nfcTags": tag_id}, {"name": 1, "email": 1})
+
+
+@app.route("/contact/<tag_id>", methods=['GET'])
+@with_logging()
+def find_user_by_tag(tag_id):
+    user = find_user_for_tag(tag_id)
+    if user is None:
+        return error_response('User with tag "%s" not found' % tag_id), 404
+    return jsonify(name=user['name'], email=user['email'])
+
+
+@app.route('/vote', methods=['POST'])
+@with_logging()
+def add_new_vote():
+    request_json = request.get_json(force=True, silent=True)
+    if not is_valid_vote_request(request_json):
+        return error_response("Invalid request. "), 400
+    user = find_user_for_tag(request_json['id_opaski'])
+    vote_id = {
+        "mac": request_json['mac_urządzenia'],
+        "tagId": request_json['id_opaski']
+    }
+    vote = {
+        "userEmail": user['email'] if user is not None else None,
+        "vote": 1 if request_json['is_positive'] else -1,
+        "timestamp": request_json['time_stamp'],
+        "date": datetime.datetime.utcnow()
+    }
+    update_result = get_db().votes.find_and_modify(
+        query=vote_id,
+        update={"$push": {"votes": vote}},
+        upsert=True,
+        full_response=True,
+        new=False
+    )
+    if update_result['ok'] != 1:
+        app.logger.error("Error while adding vote! %s", update_result)
+        error_response("Error while adding vote!"), 500
+    elif update_result['lastErrorObject']['updatedExisting']:
+        if update_result['value']['votes'][-1]['vote'] == vote['vote']:
+            return success_response("Vote not modified."), 304
+        else:
+            return success_response("Vote changed."), 200
+    return success_response("Vote added."), 201
 
 
 if __name__ == '__main__':
