@@ -99,6 +99,30 @@ def with_logging():
     return decorator
 
 
+def is_over_limit(group, source_id):
+    return get_db().invocations.find({"group": group, "source": source_id}).count() > 50
+
+
+def store_invocation(group, source_id):
+    get_db().invocations.insert({"group": group, "source": source_id, "timestamp": datetime.datetime.utcnow()})
+
+
+def limited(group, id_key):
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            id_value = request.args.get(id_key)
+            store_invocation(group, id_value)
+            if is_over_limit(group, id_value):
+                return error_response("Limit exceeded"), 429
+            else:
+                return f(*args, **kwargs)
+
+        return decorated_function
+
+    return decorator
+
+
 def is_valid_new_user_request(json):
     if not isinstance(json, dict):
         return False
@@ -308,6 +332,7 @@ def find_user_for_tag(tag_id):
 
 @app.route("/contact/<tag_id>", methods=['GET'])
 @with_logging()
+@limited(group='contact', id_key='requester')
 def find_user_by_tag(tag_id):
     user = find_user_for_tag(tag_id)
     if user is None:
