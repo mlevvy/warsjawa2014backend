@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 import datetime
-import pprint
 import re
 import os
 import binascii
@@ -316,9 +315,13 @@ def associate_tag_with_user(user_email, tag_id):
         return error_response('User with email "%s" not found' % user_email), 404
     if 'nfcTags' in user and tag_id in user['nfcTags']:
         return success_response('User "%s" is already associated with this tag' % user_email), 200
-    user = get_db().users.find_one({"nfcTags": tag_id})
-    if user is not None:
-        return error_response('Other user is already associated with tag "%s"' % tag_id), 409
+    old_tag_owner = get_db().users.find_and_modify(
+        query={"email": {"$not": user_email}, "nfcTags": tag_id},
+        update={"$push": {"deletedNfcTags": tag_id}, "$pull": {"nfcTags": tag_id}},
+        new=False
+    )
+    if old_tag_owner is not None:
+        app.logger.info('Tag "%s" removed from user "%s" in order to add to "%s"', tag_id, old_tag_owner['email'], user_email)
 
     update_result = get_db().users.update({"email": user_email}, {"$addToSet": {"nfcTags": tag_id}})
     if not update_result['ok'] == 1:
@@ -327,7 +330,9 @@ def associate_tag_with_user(user_email, tag_id):
 
 
 def find_user_for_tag(tag_id):
-    return get_db().users.find_one({"nfcTags": tag_id}, {"name": 1, "email": 1})
+    users = list(get_db().users.find({"nfcTags": tag_id}, {"name": 1, "email": 1}))
+    assert len(users) <= 1
+    return users[0] if users else None
 
 
 @app.route("/contact/<tag_id>", methods=['GET'])

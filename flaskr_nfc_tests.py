@@ -3,6 +3,7 @@ import unittest
 from flask import json
 
 from unittest.case import SkipTest
+from flaskr import find_user_for_tag
 
 from flaskr_tests import FlaskrWithMongoTest, user_in_db, EMAIL_ADDRESS as USER_EMAIL_ADDRESS
 
@@ -55,7 +56,7 @@ class NfcEndpointTest(FlaskrWithMongoTest, unittest.TestCase):
         self.assertEqual(response.content_type, "application/json")
         self.assertEqual(response.status_code, 200)
 
-    def test_returns_409_if_tag_already_associated_with_given_user(self):
+    def test_overrides_if_tag_already_associated_with_another_user(self):
         self.db.users.insert(user_in_db(confirmed=True, email="bob@example.com"))
         first_response = self.app.put('/contact/%s/%s' % ("bob@example.com", NFC_TAG_ID))
         self.assertEqual(first_response.status_code, 201)
@@ -64,7 +65,10 @@ class NfcEndpointTest(FlaskrWithMongoTest, unittest.TestCase):
         second_response = self.app.put('/contact/%s/%s' % (USER_EMAIL_ADDRESS, NFC_TAG_ID))
 
         self.assertEqual(second_response.content_type, "application/json")
-        self.assertEqual(second_response.status_code, 409)
+        self.assertEqual(second_response.status_code, 201)
+        self.assertEqual(find_user_for_tag(NFC_TAG_ID)['email'], USER_EMAIL_ADDRESS)
+        self.assertEqual(self.db.users.find_one({"email": "bob@example.com"})['deletedNfcTags'], [NFC_TAG_ID])
+
 
     def test_should_find_user_for_given_tag(self):
         self.db.users.insert(user_in_db(confirmed=True, nfcTags=[NFC_TAG_ID]))
