@@ -133,7 +133,7 @@ def is_valid_new_user_request(json):
 def is_valid_vote_request(json):
     if not isinstance(json, dict):
         return False
-    if set(json.keys()) != {"mac_urządzenia", "id_opaski", "is_positive", "time_stamp"}:
+    if set(json.keys()) != {"mac", "tagId", "isPositive", "timestamp"}:
         return False
     return True
 
@@ -378,6 +378,34 @@ def add_new_vote():
         else:
             return success_response("Vote changed."), 200
     return success_response("Vote added."), 201
+
+
+def is_valid_sell_data_request(json):
+    if not isinstance(json, dict):
+        return False
+    if set(json.keys()) != {"mac", "tagId"}:
+        return False
+    return True
+
+
+@app.route('/selldata', methods=['POST'])
+@with_logging()
+def add_new_sell_data_request():
+    request_json = request.get_json(force=True, silent=True)
+    if not is_valid_sell_data_request(request_json):
+        return error_response("Invalid request. "), 400
+    user = find_user_for_tag(request_json['tagId'])
+    sell_data = {
+        "mac": request_json['mac'],
+        "tagId": request_json['tagId'],
+        "userEmail": user['email'] if user is not None else None,
+        "date": datetime.datetime.utcnow()
+    }
+    id = get_db().selldata.insert(sell_data)
+    if id is None:
+        app.logger.error("Error while adding sell data request!")
+        error_response("Error while adding sell data request!"), 500
+    return success_response("Sell data request added."), 201
 
 
 if __name__ == '__main__':

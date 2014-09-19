@@ -7,7 +7,7 @@ from flaskr import find_user_for_tag
 
 from flaskr_tests import FlaskrWithMongoTest, user_in_db, EMAIL_ADDRESS as USER_EMAIL_ADDRESS
 
-NFC_TAG_ID = "tag_id"
+NFC_TAG_ID = "TAG_ID"
 VOTE_POSITIVE_REQUEST = """{
 "mac":"MAC",
 "tagId": "TAG_ID",
@@ -19,6 +19,10 @@ VOTE_NEGATIVE_REQUEST = """{
 "tagId": "TAG_ID",
 "isPositive": false,
 "timestamp": "2014-09-18T10:32:59+00:00"
+}"""
+SELL_DATA_REQUEST = """{
+"mac":"MAC",
+"tagId": "TAG_ID"
 }"""
 
 
@@ -119,6 +123,14 @@ class NfcEndpointTest(FlaskrWithMongoTest, unittest.TestCase):
 
         self.assertEqual(second_response.content_type, "application/json")
         self.assertEqual(second_response.status_code, 304)
+
+    def test_should_register_data_sellouts(self):
+        response = self.app.post('/selldata', data=SELL_DATA_REQUEST, content_type="application/json")
+
+        self.assertEqual(response.content_type, "application/json")
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(self.db.selldata.find_one()['tagId'], NFC_TAG_ID)
+
 
 
 if __name__ == '__main__':
