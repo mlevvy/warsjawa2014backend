@@ -8,16 +8,16 @@ from flaskr_tests import FlaskrWithMongoTest, user_in_db, EMAIL_ADDRESS as USER_
 
 NFC_TAG_ID = "tag_id"
 VOTE_POSITIVE_REQUEST = """{
-"mac_urządzenia":"MAC",
-"id_opaski": "TAG_ID",
-"is_positive": true,
-"time_stamp": "2014-09-18T10:32:59+00:00"
+"mac":"MAC",
+"tagId": "TAG_ID",
+"isPositive": true,
+"timestamp": "2014-09-18T10:32:59+00:00"
 }"""
 VOTE_NEGATIVE_REQUEST = """{
-"mac_urządzenia":"MAC",
-"id_opaski": "TAG_ID",
-"is_positive": false,
-"time_stamp": "2014-09-18T10:32:59+00:00"
+"mac":"MAC",
+"tagId": "TAG_ID",
+"isPositive": false,
+"timestamp": "2014-09-18T10:32:59+00:00"
 }"""
 
 

@@ -321,15 +321,15 @@ def add_new_vote():
     request_json = request.get_json(force=True, silent=True)
     if not is_valid_vote_request(request_json):
         return error_response("Invalid request. "), 400
-    user = find_user_for_tag(request_json['id_opaski'])
+    user = find_user_for_tag(request_json['tagId'])
     vote_id = {
-        "mac": request_json['mac_urządzenia'],
-        "tagId": request_json['id_opaski']
+        "mac": request_json['mac'],
+        "tagId": request_json['tagId']
     }
     vote = {
         "userEmail": user['email'] if user is not None else None,
-        "vote": 1 if request_json['is_positive'] else -1,
-        "timestamp": request_json['time_stamp'],
+        "vote": 1 if request_json['isPositive'] else -1,
+        "timestamp": request_json['timestamp'],
         "date": datetime.datetime.utcnow()
     }
     update_result = get_db().votes.find_and_modify(
