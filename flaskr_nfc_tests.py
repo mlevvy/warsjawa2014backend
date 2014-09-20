@@ -29,12 +29,12 @@ SELL_DATA_REQUEST = """{
 class NfcEndpointTest(FlaskrWithMongoTest, unittest.TestCase):
     def test_should_get_list_of_all_users(self):
         self.db.users.insert(user_in_db())
-        self.db.users.insert(user_in_db(confirmed=True))
+        self.db.users.insert(user_in_db(confirmed=True, name="Jan Brzęczyszczykiewicz"))
 
         response = self.app.get('/contacts')
 
         self.assertEqual(response.content_type, "application/json")
-        self.assertEqual(json.loads(response.data), [{"name": "Jan Kowalski", "email": "jan@kowalski.com"}])
+        self.assertEqual(response.get_data(as_text=True), """[{"email": "jan@kowalski.com", "name": "Jan Brzęczyszczykiewicz"}]""")
 
     def test_returns_404_if_user_not_found(self):
         response = self.app.put('/contact/%s/%s' % (USER_EMAIL_ADDRESS, NFC_TAG_ID))

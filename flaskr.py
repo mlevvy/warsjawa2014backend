@@ -302,7 +302,7 @@ def ensure_mail_were_sent_to_mentors(email_message, mentor_emails, workshop):
 def get_all_users():
     users = get_db().users.find({"isConfirmed": True}, {"name": 1, "email": 1})
     result = [{"name": user['name'], "email": user['email']} for user in users]
-    response = make_response(json.dumps(result))
+    response = make_response(json.dumps(result, ensure_ascii=False))
     response.content_type = "application/json"
     return response
 
