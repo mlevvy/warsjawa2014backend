@@ -15,7 +15,7 @@ class ConfirmationEndpointTest(FlaskrWithMongoTest, unittest.TestCase):
 
         self.app.get('/confirmation/%s' % USER_EMAIL_ADDRESS)
 
-        self.assertEqual(self.db.users.find_one()['isConfirmedTwice'], True)
+        self.assertEqual(self.db.users.find_one({"email": USER_EMAIL_ADDRESS})['isConfirmedTwice'], True)
 
     def test_should_return_user_workshops(self):
         self.db.users.insert(user_in_db(confirmed=True))
