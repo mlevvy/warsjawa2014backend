@@ -19,23 +19,24 @@ CURRENT_DATE = datetime.datetime(2007, 12, 6, 16, 29, 43, 79043)
 EMAIL_MESSAGE = EmailMessage(FIRST_MAIL_SUBJECT, "text", sender="source@example.com", date=CURRENT_DATE, email_id=1)
 
 
-def user_in_db(confirmed=False):
-    return {
-        "email": EMAIL_ADDRESS,
+def user_in_db(confirmed=False, email=EMAIL_ADDRESS, **kwargs):
+    user = {
+        "email": email,
         "name": NAME,
         "key": TEST_KEY,
         "isConfirmed": confirmed,
         "emails": []
     }
+    user.update(kwargs)
+    return user
 
 
 def workshop_in_db(with_user, with_mail):
     return {
         "workshopId": WORKSHOP_ID,
         "emailSecret": WORKSHOP_EMAIL_SECRET,
+        "name": "Workshop Name",
         "mentors": [
-            "jan@kowalski.pl",
-            "adam@nowak.pl"
         ],
         "users": [EMAIL_ADDRESS] if with_user else [],
         "emails": [EMAIL_MESSAGE] if with_mail else []

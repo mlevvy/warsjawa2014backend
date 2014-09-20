@@ -96,6 +96,22 @@ class MailMessageCreator():
             date=datetime.datetime.now()
         )
 
+    @classmethod
+    def second_confirmation_email(cls, user_email, user_name, user_code):
+        template = templates["second_confirmation"]
+        data = {
+            'userEmail': user_email,
+            'userCode': user_code,
+            'userName': user_name
+        }
+        return EmailMessage(
+            sender=WARSJAVA_SENDER_EMAIL,
+            subject=substitute_variables(template['subject'], data),
+            text=substitute_variables(template['body-plain'], data),
+            html=substitute_variables(template['body-html'], data),
+            date=datetime.datetime.now()
+        )
+
 
 class EmailMessage():
     def __init__(self, subject, text, sender=None, html=None, date=None, files=None, raw_message=None, email_id=None):

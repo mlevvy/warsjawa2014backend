@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
+import datetime
 import re
 import os
 import binascii
 import logging
 from functools import wraps
 
-from flask import Flask
+from flask import Flask, make_response, Response
 from pymongo import MongoClient
-from flask import request, g, jsonify
+from flask import request, g, jsonify, json
 import yaml
 
 from emails import MailMessageCreator, EmailMessage, generate_email_id
@@ -81,8 +82,40 @@ def with_logging():
         def decorated_function(*args, **kwargs):
             app.logger.debug("%s: %s", request, request.get_data(as_text=True, parse_form_data=True))
             rv = f(*args, **kwargs)
-            app.logger.debug("Response: %s", rv)
+            response = None
+            if isinstance(rv, Response):
+                response = rv
+            elif type(rv) is tuple and isinstance(rv[0], Response):
+                response = rv[0]
+            if response is not None:
+                app.logger.debug("Response: %s, %s", rv, response.get_data())
+            else:
+                app.logger.debug("Response: %s", rv)
             return rv
+
+        return decorated_function
+
+    return decorator
+
+
+def is_over_limit(group, source_id):
+    return get_db().invocations.find({"group": group, "source": source_id}).count() > 50
+
+
+def store_invocation(group, source_id):
+    get_db().invocations.insert({"group": group, "source": source_id, "timestamp": datetime.datetime.utcnow()})
+
+
+def limited(group, id_key):
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            id_value = request.args.get(id_key)
+            store_invocation(group, id_value)
+            if is_over_limit(group, id_value):
+                return error_response("Limit exceeded"), 429
+            else:
+                return f(*args, **kwargs)
 
         return decorated_function
 
@@ -93,6 +126,14 @@ def is_valid_new_user_request(json):
     if not isinstance(json, dict):
         return False
     if set(json.keys()) != {"email", "name"}:
+        return False
+    return True
+
+
+def is_valid_vote_request(json):
+    if not isinstance(json, dict):
+        return False
+    if set(json.keys()) != {"mac", "tagId", "isPositive", "timestamp"}:
         return False
     return True
 
@@ -254,6 +295,148 @@ def ensure_mail_were_sent_to_mentors(email_message, mentor_emails, workshop):
     for mentor_email in mentor_emails:
         message_to_send = MailMessageCreator.forward_workshop_message(email_message, workshop)
         message_to_send.send(to=mentor_email)
+
+
+@app.route("/contacts", methods=['GET'])
+@with_logging()
+def get_all_users():
+    users = get_db().users.find({"isConfirmed": True}, {"name": 1, "email": 1})
+    result = [{"name": user['name'], "email": user['email']} for user in users]
+    response = make_response(json.dumps(result))
+    response.content_type = "application/json"
+    return response
+
+
+@app.route('/contact/<user_email>/<tag_id>', methods=['PUT'])
+@with_logging()
+def associate_tag_with_user(user_email, tag_id):
+    user = get_db().users.find_one({"email": user_email})
+    if user is None:
+        return error_response('User with email "%s" not found' % user_email), 404
+    if 'nfcTags' in user and tag_id in user['nfcTags']:
+        return success_response('User "%s" is already associated with this tag' % user_email), 200
+    old_tag_owner = get_db().users.find_and_modify(
+        query={"email": {"$not": user_email}, "nfcTags": tag_id},
+        update={"$push": {"deletedNfcTags": tag_id}, "$pull": {"nfcTags": tag_id}},
+        new=False
+    )
+    if old_tag_owner is not None:
+        app.logger.info('Tag "%s" removed from user "%s" in order to add to "%s"', tag_id, old_tag_owner['email'], user_email)
+
+    update_result = get_db().users.update({"email": user_email}, {"$addToSet": {"nfcTags": tag_id}})
+    if not update_result['ok'] == 1:
+        return error_response('Unable to associate tag "%s" with user "%s"' % (tag_id, user_email)), 500
+    return success_response('User "%s" is associated with tag "%s"' % (user_email, tag_id)), 201
+
+
+def find_user_for_tag(tag_id):
+    users = list(get_db().users.find({"nfcTags": tag_id}, {"name": 1, "email": 1}))
+    assert len(users) <= 1
+    return users[0] if users else None
+
+
+@app.route("/contact/<tag_id>", methods=['GET'])
+@with_logging()
+@limited(group='contact', id_key='requester')
+def find_user_by_tag(tag_id):
+    user = find_user_for_tag(tag_id)
+    if user is None:
+        return error_response('User with tag "%s" not found' % tag_id), 404
+    return jsonify(name=user['name'], email=user['email'])
+
+
+@app.route('/vote', methods=['POST'])
+@with_logging()
+def add_new_vote():
+    request_json = request.get_json(force=True, silent=True)
+    if not is_valid_vote_request(request_json):
+        return error_response("Invalid request. "), 400
+    user = find_user_for_tag(request_json['tagId'])
+    vote_id = {
+        "mac": request_json['mac'],
+        "tagId": request_json['tagId']
+    }
+    vote = {
+        "userEmail": user['email'] if user is not None else None,
+        "vote": 1 if request_json['isPositive'] else -1,
+        "timestamp": request_json['timestamp'],
+        "date": datetime.datetime.utcnow()
+    }
+    update_result = get_db().votes.find_and_modify(
+        query=vote_id,
+        update={"$push": {"votes": vote}},
+        upsert=True,
+        full_response=True,
+        new=False
+    )
+    if update_result['ok'] != 1:
+        app.logger.error("Error while adding vote! %s", update_result)
+        error_response("Error while adding vote!"), 500
+    elif update_result['lastErrorObject']['updatedExisting']:
+        if update_result['value']['votes'][-1]['vote'] == vote['vote']:
+            return success_response("Vote not modified."), 304
+        else:
+            return success_response("Vote changed."), 200
+    return success_response("Vote added."), 201
+
+
+def is_valid_sell_data_request(json):
+    if not isinstance(json, dict):
+        return False
+    if set(json.keys()) != {"mac", "tagId"}:
+        return False
+    return True
+
+
+@app.route('/selldata', methods=['POST'])
+@with_logging()
+def add_new_sell_data_request():
+    request_json = request.get_json(force=True, silent=True)
+    if not is_valid_sell_data_request(request_json):
+        return error_response("Invalid request. "), 400
+    user = find_user_for_tag(request_json['tagId'])
+    sell_data = {
+        "mac": request_json['mac'],
+        "tagId": request_json['tagId'],
+        "userEmail": user['email'] if user is not None else None,
+        "date": datetime.datetime.utcnow()
+    }
+    id = get_db().selldata.insert(sell_data)
+    if id is None:
+        app.logger.error("Error while adding sell data request!")
+        error_response("Error while adding sell data request!"), 500
+    return success_response("Sell data request added."), 201
+
+
+@app.route('/confirmation/<user_email>', methods=['GET'])
+@with_logging()
+def confirm_user(user_email):
+    user = get_db().users.find_and_modify(query={"email": user_email}, update={"isConfirmedTwice": True})
+    if user is None:
+        return error_response('User "%s" not found' % user_email), 404
+    workshops = get_db().workshops.find({"users": user_email}, {"name": 1})
+    return """<h1>Success!</h1>You are registered for: <ul>""" + ''.join(
+        ["<li>" + w['name'] + "</li>" for w in workshops]) + """</ul>"""
+
+
+@app.route('/confirmation/send', methods=['POST'])
+@with_logging()
+def send_confirmation_emails():
+    regex = request.args.get('query')
+    count = int(request.args.get('count'))
+    query = {"isSecondConfirmationMailSent": {"$ne": True}}
+    if regex:
+        query.update({"email": {"$regex": regex}})
+    users = get_db().users.find(query, {"email": 1, "name": 1, "key": 1})
+    if count:
+        users = users.limit(count)
+    users_done = []
+    for user in users:
+        email = user['email']
+        MailMessageCreator.second_confirmation_email(email, user['name'], user['key']).send(to=email)
+        get_db().users.update({"email": email}, {"isSecondConfirmationMailSent": True})
+        users_done.append(email)
+    return success_response("Emails sent!", users=users_done)
 
 
 if __name__ == '__main__':
