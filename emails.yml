@@ -79,11 +79,11 @@ second_confirmation:
     Hi, ${userName}
     thank you for choosing Warsjawa!
 
-    There is one last thing you need to do. If you want your to retain your registration please visit this page: http://warsjawa.pl/confirmation/${userEmail}/${userCode} .
+    There is one last thing you need to do. If you want to retain your registration please visit http://warsjawa.pl/confirmation/${userEmail}/${userCode}.
 
-    You have to do this until 2014-09-24 23:59 or your registration will be canceled in order to allow other to come.
+    If you don't do it by 2014-09-24 23:59 your registration will be canceled in order to allow others to sign up.
 
-    You can manage your profile at any time using this page: http://warsjawa.pl/workshops/${userEmail}/${userCode} .
+    You can manage your profile at any time on your profile page: http://warsjawa.pl/workshops/${userEmail}/${userCode}.
 
     Regards,
     Warsjawa Team
@@ -92,11 +92,11 @@ second_confirmation:
     <p>Hi, ${userName}<br/>
     thank you for choosing Warsjawa!</p>
 
-    <p>There is one last thing you need to do. If you want your to retain your registration please visit <a href="http://warsjawa.pl/confirmation/${userEmail}/${userCode}">this page</a>.</p>
+    <p>There is one last thing you need to do. If you want to retain your registration please visit <a href="http://warsjawa.pl/confirmation/${userEmail}/${userCode}">this page</a>.</p>
 
-    <p>You have to do this until <strong>2014-09-24 23:59</strong> or your registration will be canceled in order to allow other to come.</p>
+    <p>If you don't do it by <strong>2014-09-24 23:59</strong> your registration will be canceled in order to allow others to sign up.</p>
 
-    <p>You can manage your profile at any time using your <a href="http://warsjawa.pl/workshops/${userEmail}/${userCode}">profile page</a>.</p>
+    <p>You can manage your profile at any time on your <a href="http://warsjawa.pl/workshops/${userEmail}/${userCode}">profile page</a>.</p>
 
     Regards,<br/>
     Warsjawa Team<br/>
