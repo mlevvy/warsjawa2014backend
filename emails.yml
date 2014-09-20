@@ -25,7 +25,7 @@ user_registration:
     Warsjawa Team<br/>
     contact@warsjawa.pl<br/>
 user_confirmation:
-  subject: Warsjawa - additional informations
+  subject: Warsjawa - additional information
   body-plain: |
     Hi, ${name}
     You can manage your workshops at any time using this link: http://warsjawa.pl/workshops/${userEmail}/${userCode} .
