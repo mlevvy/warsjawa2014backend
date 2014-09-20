@@ -35,9 +35,8 @@ def workshop_in_db(with_user, with_mail):
     return {
         "workshopId": WORKSHOP_ID,
         "emailSecret": WORKSHOP_EMAIL_SECRET,
+        "name": "Workshop Name",
         "mentors": [
-            "jan@kowalski.pl",
-            "adam@nowak.pl"
         ],
         "users": [EMAIL_ADDRESS] if with_user else [],
         "emails": [EMAIL_MESSAGE] if with_mail else []

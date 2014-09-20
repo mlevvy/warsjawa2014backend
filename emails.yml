@@ -73,3 +73,31 @@ mentor_welcome:
     Regards,<br/>
     Warsjawa Team<br/>
     contact@warsjawa.pl<br/>
+second_confirmation:
+  subject: "Warsjawa - second confirmation needed"
+  body-plain: |
+    Hi, ${userName}
+    thank you for choosing Warsjawa!
+
+    There is one last thing you need to do. If you want your to retain your registration please visit this page: http://warsjawa.pl/confirmation/${userEmail}/${userCode} .
+
+    You have to do this until 2014-09-24 23:59 or your registration will be canceled in order to allow other to come.
+
+    You can manage your profile at any time using this page: http://warsjawa.pl/workshops/${userEmail}/${userCode} .
+
+    Regards,
+    Warsjawa Team
+    contact@warsjawa.pl
+  body-html: |
+    <p>Hi, ${userName}<br/>
+    thank you for choosing Warsjawa!</p>
+
+    <p>There is one last thing you need to do. If you want your to retain your registration please visit <a href="http://warsjawa.pl/confirmation/${userEmail}/${userCode}">this page</a>.</p>
+
+    <p>You have to do this until <strong>2014-09-24 23:59</strong> or your registration will be canceled in order to allow other to come.</p>
+
+    <p>You can manage your profile at any time using your <a href="http://warsjawa.pl/workshops/${userEmail}/${userCode}">profile page</a>.</p>
+
+    Regards,<br/>
+    Warsjawa Team<br/>
+    contact@warsjawa.pl<br/>

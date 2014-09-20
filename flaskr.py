@@ -408,6 +408,37 @@ def add_new_sell_data_request():
     return success_response("Sell data request added."), 201
 
 
+@app.route('/confirmation/<user_email>', methods=['GET'])
+@with_logging()
+def confirm_user(user_email):
+    user = get_db().users.find_and_modify(query={"email": user_email}, update={"isConfirmedTwice": True})
+    if user is None:
+        return error_response('User "%s" not found' % user_email), 404
+    workshops = get_db().workshops.find({"users": user_email}, {"name": 1})
+    return """<h1>Success!</h1>You are registered for: <ul>""" + ''.join(
+        ["<li>" + w['name'] + "</li>" for w in workshops]) + """</ul>"""
+
+
+@app.route('/confirmation/send', methods=['POST'])
+@with_logging()
+def send_confirmation_emails():
+    regex = request.args.get('query')
+    count = int(request.args.get('count'))
+    query = {"isSecondConfirmationMailSent": {"$ne": True}}
+    if regex:
+        query.update({"email": {"$regex": regex}})
+    users = get_db().users.find(query, {"email": 1, "name": 1, "key": 1})
+    if count:
+        users = users.limit(count)
+    users_done = []
+    for user in users:
+        email = user['email']
+        MailMessageCreator.second_confirmation_email(email, user['name'], user['key']).send(to=email)
+        get_db().users.update({"email": email}, {"isSecondConfirmationMailSent": True})
+        users_done.append(email)
+    return success_response("Emails sent!", users=users_done)
+
+
 if __name__ == '__main__':
     with app.app_context():
         load_workshops()
