@@ -79,7 +79,7 @@ second_confirmation:
     Hi, ${userName}
     thank you for choosing Warsjawa!
 
-    There is one last thing you need to do. If you want to retain your registration please visit http://warsjawa.pl/confirmation/${userEmail}/${userCode}.
+    There is one last thing you need to do. If you want to retain your registration please visit http://warsjawa.pl/confirmation/${userEmail}.
 
     If you don't do it by 2014-09-24 23:59 your registration will be canceled in order to allow others to sign up.
 
@@ -92,7 +92,7 @@ second_confirmation:
     <p>Hi, ${userName}<br/>
     thank you for choosing Warsjawa!</p>
 
-    <p>There is one last thing you need to do. If you want to retain your registration please visit <a href="http://warsjawa.pl/confirmation/${userEmail}/${userCode}">this page</a>.</p>
+    <p>There is one last thing you need to do. If you want to retain your registration please visit <a href="http://warsjawa.pl/confirmation/${userEmail}">this page</a>.</p>
 
     <p>If you don't do it by <strong>2014-09-24 23:59</strong> your registration will be canceled in order to allow others to sign up.</p>
 

@@ -419,7 +419,7 @@ def confirm_user(user_email):
         ["<li>" + w['name'] + "</li>" for w in workshops]) + """</ul>"""
 
 
-@app.route('/confirmation/send', methods=['POST'])
+@app.route('/send_confirmation', methods=['POST'])
 @with_logging()
 def send_confirmation_emails():
     regex = request.args.get('query')
