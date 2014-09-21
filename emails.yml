@@ -29,8 +29,7 @@ user_confirmation:
   body-plain: |
     Hi, ${name}
     You can manage your workshops at any time using this link: http://warsjawa.pl/workshops/${userEmail}/${userCode} .
-    Please visit registration page between 20th and 24th of September for confirmation purposes. Keep in mind that in case of lack of confirmation your registration to all workshops will be removed.
-    Don’t worry, we will remind you about that!
+    There will be no additional confirmation. The status of your registration is final.
 
     Regards,
     Warsjawa Team
@@ -38,7 +37,7 @@ user_confirmation:
   body-html: |
     Hi, ${name}<br/>
     <p>You can manage your workshops at any time using this <a href="http://warsjawa.pl/workshops/${userEmail}/${userCode}">link</a>.</p>
-    <p>Please visit registration page between 20th and 24th of September for confirmation purposes. Keep in mind that in case of lack of confirmation your registration to all workshops will be removed. Don’t worry, we will remind you about that!</p>
+    <p>There will be no additional confirmation. The status of your registration is final.</p>
 
     Regards,<br/>
     Warsjawa Team<br/>
